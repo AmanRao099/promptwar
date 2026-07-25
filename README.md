@@ -39,8 +39,7 @@ lib/
   safety/scrubber.ts    PII redaction before any model dispatch
   http/streamRoute.ts   shared route handler (rate-limit→validate→bypass→scrub→stream)
   http/rateLimit.ts     in-memory sliding-window limiter
-  genai/client.ts       Gemini streaming + deterministic mock fallback
-  genai/mocks.ts        offline, input-matched fallback content
+  genai/client.ts       Groq + Gemini streaming (live only, no mock)
   prompts/*             modular system prompts (no prompt strings in components)
   schemas/*             Zod request/response schemas
   config/*              schema-validated UI config (craving, somatic, tags)
@@ -75,12 +74,24 @@ npm run dev                    # http://localhost:3000
 
 ### Environment
 
+A real LLM provider is **required** — there is no mock/offline mode. The server
+fails fast at startup if no provider key is set.
+
 | Var | Required | Default | Notes |
 |---|---|---|---|
-| `GEMINI_API_KEY` | No | — | Google AI Studio key. **Absent or over-quota → app serves deterministic mock content**, so it runs fully offline. |
+| `GROQ_API_KEY` | **Yes*** | — | Groq key (free, no card): https://console.groq.com/keys |
+| `GROQ_MODEL` | No | `llama-3.3-70b-versatile` | Any Groq chat model. |
+| `GEMINI_API_KEY` | No | — | Google AI Studio key; used only if `GROQ_API_KEY` is empty. |
 | `GEMINI_MODEL` | No | `gemini-2.0-flash` | Any `@google/genai`-compatible model id. |
 
-The response header `x-haven-mode` reports `live` or `mock` per request.
+\* At least one of `GROQ_API_KEY` / `GEMINI_API_KEY` is required.
+
+Provider priority: **Groq → Gemini**. The response header `x-haven-provider`
+reports which served each request; `/api/health` reports the active provider.
+When the provider is unreachable, routes return **502** and the UI shows an
+honest retry — never fabricated content. The hardcoded 988/911 crisis overlay
+and the deterministic crisis bypass are always available, independent of any
+provider.
 
 ---
 
@@ -122,8 +133,8 @@ The image runs as a non-root user and ships a `/api/health` healthcheck.
 - Per-IP in-memory rate limiting on both streaming routes (swap for Redis to
   scale horizontally).
 - In-flight request cancellation (`AbortController`) so rapid re-taps never race.
-- Live-model failure (e.g. 429 quota) falls back to mock mid-flight — the user
-  never sees a blank screen.
+- Provider failure fails fast with a 502 + one bounded retry on transient
+  errors; the UI shows an honest retry rather than fabricated content.
 - Automated accessibility checks (jest-axe) + WCAG radiogroup keyboard nav +
   modal focus trap.
 

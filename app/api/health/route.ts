@@ -9,8 +9,8 @@ export function GET() {
   return Response.json(
     {
       status: "ok",
-      provider, // "groq" | "gemini" | "mock"
-      mode: provider === "mock" ? "mock" : "live",
+      provider, // "groq" | "gemini"
+      mode: "live",
       time: new Date().toISOString(),
     },
     { headers: { "cache-control": "no-store" } },

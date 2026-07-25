@@ -10,7 +10,6 @@ import { AudioGroundingButton } from "./AudioGroundingButton";
 export function ScriptStream() {
   const status = useRecoveryStore((s) => s.status);
   const partial = useRecoveryStore((s) => s.partial);
-  const mode = useRecoveryStore((s) => s.mode);
   const generate = useRecoveryStore((s) => s.generate);
 
   if (status === "idle") return null;
@@ -79,12 +78,6 @@ export function ScriptStream() {
         </p>
       )}
 
-      {status === "done" && mode === "mock" && (
-        <p className="text-sm text-haven-muted">
-          Offline demo mode — set <code>GEMINI_API_KEY</code> for live Gemini
-          responses.
-        </p>
-      )}
     </section>
   );
 }

@@ -3,9 +3,8 @@
 Multi-modal GenAI recovery & prevention platform for Substance Use Disorder (SUD) recovery + caregivers.
 Stack: Next.js 14 App Router · TypeScript · Tailwind · Zustand · Zod · `@google/genai` (`gemini-2.0-flash`) · Vitest.
 
-Provider: **Groq** (`llama-3.3-70b-versatile`, free tier) is the active live provider — verified streaming live end-to-end. Fallback order: **Groq → Gemini → deterministic mock** (`lib/env.ts activeProvider`). Gemini kept as a secondary option (`gemini-2.0-flash`).
-Key-missing / provider-failure behavior: graceful mock fallback (streams canned safe scripts; never a blank screen).
-Scope: **all 6 phases complete.** Live-verified in browser (recovery + caregiver). Live Gemini blocked only by 429 quota on the supplied key — app auto-falls back to deterministic mock, zero code change needed when quota frees.
+Provider: **Groq** (`llama-3.3-70b-versatile`) active, **Gemini** secondary (`gemini-2.0-flash`). Priority: **Groq → Gemini**. **No mock/offline mode** — a real provider key is required at startup; provider failure returns a 502 with an honest retry (never fabricated content). The deterministic crisis bypass + hardcoded 988/911 overlay are always available, independent of any provider.
+Scope: **all 8 phases complete**, live-only, verified end-to-end.
 
 ---
 
@@ -83,11 +82,19 @@ Scope: **all 6 phases complete.** Live-verified in browser (recovery + caregiver
 - [x] `.github/workflows/ci.yml` — CI: install → lint → typecheck → test → build on push/PR
 - [x] `git init` + first commit (`.env.local` gitignored; only `.env.example` tracked)
 
+## [x] Phase 9: Live-Only / Real-World (no mock)
+- [x] Deleted `lib/genai/mocks.ts`; `client.ts` is live-only (Groq/Gemini), no silent fallback
+- [x] `lib/env.ts` — requires a provider key; server fails fast if none set
+- [x] `lib/http/streamRoute.ts` — peeks first chunk → honest **502** on provider failure + one bounded retry on transient errors; `x-haven-provider` header
+- [x] Stores surface a real **error + retry** when nothing usable streams (no fake content)
+- [x] Removed "offline demo mode" UI notes; docs updated (README, `.env.example`)
+- [x] Route tests stub the provider SSE stream (real code path) + assert 502 on outage + provider-not-called on crisis
+
 ### Final verification
 - `npx tsc --noEmit` → 0 errors
 - `npx next lint` → **0 warnings/errors**
-- `npx next build` → succeeds, standalone output, 9 routes (adds `/icon.svg`, `/manifest.webmanifest`)
-- `npx vitest run` → **64/64 pass** across 10 files
+- `npx next build` → succeeds, standalone output
+- `npx vitest run` → **65/65 pass** across 10 files
 - Live: Groq streaming verified end-to-end (`provider:groq, mode:live`); crisis bypass still zero-LLM with a live key
 - All 6 security headers present, `X-Powered-By` absent, `/api/health` ok, `x-ratelimit-remaining` emitted
 - Browser: recovery + caregiver flows both work end-to-end

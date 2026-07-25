@@ -4,7 +4,6 @@ import {
   type GenerateScriptRequest,
 } from "@/lib/schemas/request";
 import { refusalSystemPrompt, buildRecoveryUserTurn } from "@/lib/prompts";
-import { buildRecoveryMock } from "@/lib/genai/mocks";
 import { handleScriptRoute } from "@/lib/http/streamRoute";
 
 export const runtime = "nodejs";
@@ -22,7 +21,5 @@ export function POST(req: NextRequest) {
         somaticId: d.somaticId,
         scrubbedNote,
       }),
-    buildMock: (d) =>
-      buildRecoveryMock({ cravingValue: d.cravingValue, somaticId: d.somaticId }),
   });
 }

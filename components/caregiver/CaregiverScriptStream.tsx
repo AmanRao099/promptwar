@@ -9,7 +9,6 @@ import { AudioGroundingButton } from "@/components/recovery/AudioGroundingButton
 export function CaregiverScriptStream() {
   const status = useCaregiverStore((s) => s.status);
   const partial = useCaregiverStore((s) => s.partial);
-  const mode = useCaregiverStore((s) => s.mode);
   const generate = useCaregiverStore((s) => s.generate);
 
   if (status === "idle") return null;
@@ -92,12 +91,6 @@ export function CaregiverScriptStream() {
         </div>
       )}
 
-      {status === "done" && mode === "mock" && (
-        <p className="text-sm text-haven-muted">
-          Offline demo mode — set <code>GEMINI_API_KEY</code> for live Gemini
-          responses.
-        </p>
-      )}
     </section>
   );
 }

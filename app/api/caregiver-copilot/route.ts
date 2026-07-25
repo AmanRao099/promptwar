@@ -4,7 +4,6 @@ import {
   type CaregiverRequest,
 } from "@/lib/schemas/request";
 import { caregiverSystemPrompt, buildCaregiverUserTurn } from "@/lib/prompts";
-import { buildCaregiverMock } from "@/lib/genai/mocks";
 import { handleScriptRoute } from "@/lib/http/streamRoute";
 
 export const runtime = "nodejs";
@@ -18,6 +17,5 @@ export function POST(req: NextRequest) {
     getNote: (d) => d.note,
     buildUserTurn: (d, scrubbedNote) =>
       buildCaregiverUserTurn({ tagId: d.tagId, scrubbedNote }),
-    buildMock: (d) => buildCaregiverMock({ tagId: d.tagId }),
   });
 }

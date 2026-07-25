@@ -5,14 +5,22 @@ import { z } from "zod";
  * GEMINI_API_KEY is optional by design: when absent, the app degrades to
  * deterministic mock scripts (see lib/genai/client.ts) so demos work offline.
  */
-const envSchema = z.object({
-  // Groq (OpenAI-compatible, free tier). Takes priority when set.
-  GROQ_API_KEY: z.string().trim().min(1).optional(),
-  GROQ_MODEL: z.string().trim().min(1).default("llama-3.3-70b-versatile"),
-  // Gemini (Google GenAI). Used if Groq is not configured.
-  GEMINI_API_KEY: z.string().trim().min(1).optional(),
-  GEMINI_MODEL: z.string().trim().min(1).default("gemini-2.0-flash"),
-});
+const envSchema = z
+  .object({
+    // Groq (OpenAI-compatible). Takes priority when set.
+    GROQ_API_KEY: z.string().trim().min(1).optional(),
+    GROQ_MODEL: z.string().trim().min(1).default("llama-3.3-70b-versatile"),
+    // Gemini (Google GenAI). Used if Groq is not configured.
+    GEMINI_API_KEY: z.string().trim().min(1).optional(),
+    GEMINI_MODEL: z.string().trim().min(1).default("gemini-2.0-flash"),
+  })
+  // Production requires a real LLM provider. No mock fallback exists — if
+  // neither key is set the server fails fast at startup rather than silently
+  // serving canned content.
+  .refine((e) => Boolean(e.GROQ_API_KEY || e.GEMINI_API_KEY), {
+    message:
+      "No LLM provider configured. Set GROQ_API_KEY (recommended) or GEMINI_API_KEY.",
+  });
 
 export type HavenEnv = z.infer<typeof envSchema>;
 
@@ -38,16 +46,11 @@ export function getEnv(): HavenEnv {
   return cached;
 }
 
-export type Provider = "groq" | "gemini" | "mock";
+export type Provider = "groq" | "gemini";
 
-// Groq first (chosen free provider), then Gemini, else deterministic mock.
+// Groq first (recommended), then Gemini. getEnv() guarantees at least one key.
 export function activeProvider(): Provider {
   const env = getEnv();
   if (env.GROQ_API_KEY) return "groq";
-  if (env.GEMINI_API_KEY) return "gemini";
-  return "mock";
-}
-
-export function hasLiveKey(): boolean {
-  return activeProvider() !== "mock";
+  return "gemini";
 }

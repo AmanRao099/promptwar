@@ -19,7 +19,7 @@ interface CaregiverState {
   tagId: string | null;
   note: string;
   status: CaregiverStatus;
-  mode: "live" | "mock" | null;
+  provider: string | null;
   partial: PartialCaregiver;
   final: CaregiverScript | null;
   crisisCategories: string[];
@@ -39,7 +39,7 @@ export const useCaregiverStore = create<CaregiverState>((set, get) => ({
   tagId: null,
   note: "",
   status: "idle",
-  mode: null,
+  provider: null,
   partial: emptyPartial,
   final: null,
   crisisCategories: [],
@@ -52,7 +52,7 @@ export const useCaregiverStore = create<CaregiverState>((set, get) => ({
     inflight = null;
     set({
       status: "idle",
-      mode: null,
+      provider: null,
       partial: emptyPartial,
       final: null,
       crisisCategories: [],
@@ -72,7 +72,7 @@ export const useCaregiverStore = create<CaregiverState>((set, get) => ({
       partial: emptyPartial,
       final: null,
       crisisCategories: [],
-      mode: null,
+      provider: null,
     });
 
     let res: Response;
@@ -108,7 +108,7 @@ export const useCaregiverStore = create<CaregiverState>((set, get) => ({
       return;
     }
 
-    set({ mode: (res.headers.get("x-haven-mode") as "live" | "mock") ?? null });
+    set({ provider: res.headers.get("x-haven-provider") });
 
     if (!res.body) {
       set({ status: "error" });
@@ -138,7 +138,9 @@ export const useCaregiverStore = create<CaregiverState>((set, get) => ({
       const validated = caregiverScriptSchema.parse(obj);
       set({ final: validated, partial: validated, status: "done" });
     } catch {
-      set({ status: "done" });
+      const p = get().partial;
+      const usable = p.sayThis.length > 0 || p.avoid.length > 0;
+      set({ status: usable ? "done" : "error" });
     }
   },
 }));

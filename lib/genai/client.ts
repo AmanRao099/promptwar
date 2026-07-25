@@ -1,19 +1,13 @@
 import { GoogleGenAI } from "@google/genai";
 import { getEnv, activeProvider } from "@/lib/env";
-import type { RecoveryScript, CaregiverScript } from "@/lib/schemas/response";
-
-export type StreamMode = "live" | "mock";
 
 export interface StreamParams {
   systemPrompt: string;
   userTurn: string;
-  // Deterministic fallback payload streamed when no provider is configured
-  // (or when a live provider fails before emitting anything).
-  mock: RecoveryScript | CaregiverScript;
 }
 
 export interface HavenStream {
-  mode: StreamMode;
+  provider: "groq" | "gemini";
   chunks: AsyncGenerator<string, void, unknown>;
 }
 
@@ -100,7 +94,8 @@ async function* groqChunks(
   });
 
   if (!res.ok || !res.body) {
-    throw new Error(`groq responded ${res.status}`);
+    const detail = await res.text().catch(() => "");
+    throw new Error(`groq responded ${res.status} ${detail.slice(0, 200)}`);
   }
 
   const reader = res.body.getReader();
@@ -121,69 +116,21 @@ async function* groqChunks(
 }
 
 // ---------------------------------------------------------------------------
-// Mock (deterministic offline fallback)
+// Provider dispatch
 // ---------------------------------------------------------------------------
-async function* mockChunks(
-  payload: RecoveryScript | CaregiverScript,
-): AsyncGenerator<string, void, unknown> {
-  const json = JSON.stringify(payload);
-  const step = 24;
-  for (let i = 0; i < json.length; i += step) {
-    yield json.slice(i, i + step);
-    await new Promise((r) => setTimeout(r, 18));
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Provider dispatch + graceful fallback
-// ---------------------------------------------------------------------------
-async function* liveWithFallback(
-  provider: "groq" | "gemini",
-  systemPrompt: string,
-  userTurn: string,
-  fallback: RecoveryScript | CaregiverScript,
-): AsyncGenerator<string, void, unknown> {
-  let yielded = 0;
-  try {
-    const source =
-      provider === "groq"
-        ? groqChunks(systemPrompt, userTurn)
-        : geminiChunks(systemPrompt, userTurn);
-    for await (const chunk of source) {
-      if (chunk) {
-        yielded += chunk.length;
-        yield chunk;
-      }
-    }
-  } catch (err) {
-    // Live provider failed (quota, suspension, network). If nothing streamed
-    // yet, fall back cleanly to the mock so the user never sees a blank screen.
-    // If partial JSON already went out, don't corrupt it — rethrow.
-    console.error(`[genai] ${provider} failed, falling back to mock:`, err);
-    if (yielded === 0) {
-      yield* mockChunks(fallback);
-      return;
-    }
-    throw err;
-  }
-}
 
 /**
- * Returns a text-chunk stream. Provider order: Groq → Gemini → mock
- * (see lib/env.ts activeProvider). Never throws for a missing/failing key.
+ * Live text-chunk stream from the active provider (Groq → Gemini). No mock
+ * fallback: if the provider fails, the error propagates to the caller, which
+ * surfaces an honest error + retry to the user. The connection is established
+ * lazily on the first `.next()`, so the route can detect failures before it
+ * commits to a 200 streaming response.
  */
 export function streamScript(params: StreamParams): HavenStream {
   const provider = activeProvider();
-  if (provider === "mock") {
-    return { mode: "mock", chunks: mockChunks(params.mock) };
-  }
-  return {
-    mode: "live",
-    chunks: liveWithFallback(
-      provider,
-      params.systemPrompt,
-      params.userTurn,
-      params.mock,
-    ),
-  };
+  const chunks =
+    provider === "groq"
+      ? groqChunks(params.systemPrompt, params.userTurn)
+      : geminiChunks(params.systemPrompt, params.userTurn);
+  return { provider, chunks };
 }

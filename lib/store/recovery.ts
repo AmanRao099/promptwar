@@ -20,7 +20,7 @@ interface RecoveryState {
   somaticId: string | null;
   note: string;
   status: RecoveryStatus;
-  mode: "live" | "mock" | null;
+  provider: string | null;
   partial: PartialRecovery;
   final: RecoveryScript | null;
   crisisCategories: string[];
@@ -45,7 +45,7 @@ export const useRecoveryStore = create<RecoveryState>((set, get) => ({
   somaticId: null,
   note: "",
   status: "idle",
-  mode: null,
+  provider: null,
   partial: emptyPartial,
   final: null,
   crisisCategories: [],
@@ -59,7 +59,7 @@ export const useRecoveryStore = create<RecoveryState>((set, get) => ({
     inflight = null;
     set({
       status: "idle",
-      mode: null,
+      provider: null,
       partial: emptyPartial,
       final: null,
       crisisCategories: [],
@@ -80,7 +80,7 @@ export const useRecoveryStore = create<RecoveryState>((set, get) => ({
       partial: emptyPartial,
       final: null,
       crisisCategories: [],
-      mode: null,
+      provider: null,
     });
 
     let res: Response;
@@ -118,7 +118,7 @@ export const useRecoveryStore = create<RecoveryState>((set, get) => ({
       return;
     }
 
-    set({ mode: (res.headers.get("x-haven-mode") as "live" | "mock") ?? null });
+    set({ provider: res.headers.get("x-haven-provider") });
 
     if (!res.body) {
       set({ status: "error" });
@@ -149,8 +149,11 @@ export const useRecoveryStore = create<RecoveryState>((set, get) => ({
       const validated = recoveryScriptSchema.parse(obj);
       set({ final: validated, partial: validated, status: "done" });
     } catch {
-      // Keep whatever streamed cleanly; still usable, just mark done.
-      set({ status: "done" });
+      // Fell short of a full valid document. If usable lines streamed, keep
+      // them; otherwise surface an honest error + retry (no fake content).
+      const p = get().partial;
+      const usable = p.boundaryLines.length > 0 || p.grounding.steps.length > 0;
+      set({ status: usable ? "done" : "error" });
     }
   },
 }));
