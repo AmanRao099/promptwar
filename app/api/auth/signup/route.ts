@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const user = createUser(
+    const user = await createUser(
       parsed.data.email,
       parsed.data.password,
       parsed.data.role,
@@ -55,7 +55,9 @@ export async function POST(req: NextRequest) {
     if ((err as Error).message === "email_taken") {
       return NextResponse.json({ error: "email_taken" }, { status: 409 });
     }
-    console.error("[auth/signup]", err);
-    return NextResponse.json({ error: "signup_failed" }, { status: 500 });
+    // Most common production cause: no writable disk and no TURSO_DATABASE_URL
+    // configured (serverless filesystems are ephemeral/read-only).
+    console.error("[auth/signup] storage error", err);
+    return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
   }
 }

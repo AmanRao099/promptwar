@@ -28,7 +28,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid payload" }, { status: 422 });
   }
 
-  const user = authenticate(parsed.data.email, parsed.data.password);
+  let user: Awaited<ReturnType<typeof authenticate>>;
+  try {
+    user = await authenticate(parsed.data.email, parsed.data.password);
+  } catch (err) {
+    console.error("[auth/login] storage error", err);
+    return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
+  }
   if (!user) {
     return NextResponse.json({ error: "invalid_credentials" }, { status: 401 });
   }

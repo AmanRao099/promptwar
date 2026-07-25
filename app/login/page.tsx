@@ -41,9 +41,11 @@ export default function LoginPage() {
             ? "That email already has an account — sign in instead."
             : data.error === "invalid_credentials"
               ? "Email or password didn't match."
-              : mode === "signup"
-                ? "Couldn't create the account. Password needs 8+ characters."
-                : "Sign-in failed. Try again.",
+              : data.error === "storage_unavailable"
+                ? "Account storage isn't configured on this deployment yet. (Admin: set TURSO_DATABASE_URL + TURSO_AUTH_TOKEN.)"
+                : mode === "signup"
+                  ? "Couldn't create the account. Password needs 8+ characters."
+                  : "Sign-in failed. Try again.",
         );
         return;
       }

@@ -31,6 +31,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid payload" }, { status: 422 });
   }
 
-  logEvent(session.userId, parsed.data.type, parsed.data.payload);
+  try {
+    await logEvent(session.userId, parsed.data.type, parsed.data.payload);
+  } catch (err) {
+    console.error("[events] storage error", err);
+    return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
+  }
   return NextResponse.json({ ok: true });
 }

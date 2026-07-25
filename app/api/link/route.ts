@@ -27,9 +27,13 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const user = linkByCode(session.userId, parsed.data.code);
+    const user = await linkByCode(session.userId, parsed.data.code);
     return NextResponse.json({ linked: { id: user.id, email: user.email } });
-  } catch {
-    return NextResponse.json({ error: "code_not_found" }, { status: 404 });
+  } catch (err) {
+    if ((err as Error).message === "code_not_found") {
+      return NextResponse.json({ error: "code_not_found" }, { status: 404 });
+    }
+    console.error("[link] storage error", err);
+    return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
   }
 }

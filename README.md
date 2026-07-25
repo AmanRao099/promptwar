@@ -145,7 +145,16 @@ npm test            # vitest (55 tests)
 ## Deploy
 
 ### Vercel
-Zero-config. Import the repo, set `GEMINI_API_KEY` in project env vars, deploy.
+Import the repo and set these project env vars, then deploy:
+
+| Var | Why |
+|---|---|
+| `GROQ_API_KEY` | live model (required) |
+| `AUTH_SECRET` | session signing (`openssl rand -hex 32`) |
+| `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` | **required for accounts** — Vercel's filesystem is ephemeral/read-only, so the local SQLite file cannot work there. Create a free DB at https://turso.tech. |
+
+Without Turso vars, auth endpoints return `503 storage_unavailable` (the rest
+of the app — scripts, voice, crisis overlay — still works signed-out).
 Streaming routes run on the Node.js runtime.
 
 ### Docker

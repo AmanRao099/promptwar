@@ -46,61 +46,63 @@ describe("session tokens", () => {
 });
 
 describe("accounts, linking, and feed access control", () => {
-  it("signs up both roles; only the recovery user gets a share code", () => {
-    const u = createUser("pat@example.com", "password123", "user");
-    const c = createUser("care@example.com", "password123", "caretaker");
+  it("signs up both roles; only the recovery user gets a share code", async () => {
+    const u = await createUser("pat@example.com", "password123", "user");
+    const c = await createUser("care@example.com", "password123", "caretaker");
     expect(u.share_code).toMatch(/^[A-Z0-9]{6}$/);
     expect(c.share_code).toBeNull();
-    expect(() => createUser("pat@example.com", "x".repeat(10), "user")).toThrow(
-      "email_taken",
-    );
+    await expect(
+      createUser("pat@example.com", "x".repeat(10), "user"),
+    ).rejects.toThrow("email_taken");
   });
 
-  it("authenticates with correct credentials only", () => {
-    expect(authenticate("pat@example.com", "password123")?.email).toBe(
+  it("authenticates with correct credentials only", async () => {
+    expect((await authenticate("pat@example.com", "password123"))?.email).toBe(
       "pat@example.com",
     );
-    expect(authenticate("pat@example.com", "nope-nope")).toBeNull();
+    expect(await authenticate("pat@example.com", "nope-nope")).toBeNull();
   });
 
-  it("links caretaker via share code and shows only linked users' events", () => {
-    const pat = authenticate("pat@example.com", "password123")!;
-    const care = authenticate("care@example.com", "password123")!;
-    const stranger = createUser("stranger@example.com", "password123", "user");
+  it("links caretaker via share code and shows only linked users' events", async () => {
+    const pat = (await authenticate("pat@example.com", "password123"))!;
+    const care = (await authenticate("care@example.com", "password123"))!;
+    const stranger = await createUser("stranger@example.com", "password123", "user");
 
-    linkByCode(care.id, pat.share_code!);
-    expect(linkedUsers(care.id).map((u) => u.email)).toEqual(["pat@example.com"]);
+    await linkByCode(care.id, pat.share_code!);
+    expect((await linkedUsers(care.id)).map((u) => u.email)).toEqual([
+      "pat@example.com",
+    ]);
 
-    logEvent(pat.id, "checkin", { cravingValue: 4, somaticId: "chest" });
-    logEvent(pat.id, "location", { lat: 12.9, lng: 77.6, accuracy: 20 });
-    logEvent(stranger.id, "sos", { trigger: "manual" });
+    await logEvent(pat.id, "checkin", { cravingValue: 4, somaticId: "chest" });
+    await logEvent(pat.id, "location", { lat: 12.9, lng: 77.6, accuracy: 20 });
+    await logEvent(stranger.id, "sos", { trigger: "manual" });
 
-    const feed = feedFor({ userId: care.id, role: "caretaker" });
+    const feed = await feedFor({ userId: care.id, role: "caretaker" });
     expect(feed).toHaveLength(2); // stranger's SOS is NOT visible
     expect(feed.every((e) => e.user_email === "pat@example.com")).toBe(true);
     expect(feed[0].type).toBe("location");
   });
 
-  it("rejects unknown share codes", () => {
-    const care = authenticate("care@example.com", "password123")!;
-    expect(() => linkByCode(care.id, "ZZZZZZ")).toThrow("code_not_found");
+  it("rejects unknown share codes", async () => {
+    const care = (await authenticate("care@example.com", "password123"))!;
+    await expect(linkByCode(care.id, "ZZZZZZ")).rejects.toThrow("code_not_found");
   });
 
-  it("scrubs PII from event payloads before storing", () => {
-    const pat = authenticate("pat@example.com", "password123")!;
-    logEvent(pat.id, "voice", {
+  it("scrubs PII from event payloads before storing", async () => {
+    const pat = (await authenticate("pat@example.com", "password123"))!;
+    await logEvent(pat.id, "voice", {
       transcript: "call me at (415) 555-2671 or mail pat@example.com",
     });
-    const feed = feedFor({ userId: pat.id, role: "user" }, 1);
+    const feed = await feedFor({ userId: pat.id, role: "user" }, 1);
     const stored = String(feed[0].payload.transcript);
     expect(stored).not.toContain("555-2671");
     expect(stored).toContain("[PHONE]");
     expect(stored).toContain("[EMAIL]");
   });
 
-  it("a user sees only their own events", () => {
-    const pat = authenticate("pat@example.com", "password123")!;
-    const feed = feedFor({ userId: pat.id, role: "user" });
+  it("a user sees only their own events", async () => {
+    const pat = (await authenticate("pat@example.com", "password123"))!;
+    const feed = await feedFor({ userId: pat.id, role: "user" });
     expect(feed.every((e) => e.user_email === "pat@example.com")).toBe(true);
   });
 });

@@ -1,5 +1,5 @@
 import { randomInt } from "node:crypto";
-import { getDb } from "./db";
+import { getDriver } from "./db";
 import { hashPassword, verifyPassword } from "./password";
 import { scrubPII } from "@/lib/safety/scrubber";
 
@@ -30,13 +30,13 @@ function newShareCode(): string {
   return code;
 }
 
-export function createUser(
+export async function createUser(
   email: string,
   password: string,
   role: "user" | "caretaker",
-): UserRow {
-  const db = getDb();
-  const exists = db.prepare("SELECT id FROM users WHERE email = ?").get(email);
+): Promise<UserRow> {
+  const db = await getDriver();
+  const exists = await db.get("SELECT id FROM users WHERE email = ?", [email]);
   if (exists) throw new Error("email_taken");
 
   // Only the recovery-side role has a share code to hand to a caretaker.
@@ -44,28 +44,25 @@ export function createUser(
   if (role === "user") {
     do {
       shareCode = newShareCode();
-    } while (db.prepare("SELECT id FROM users WHERE share_code = ?").get(shareCode));
+    } while (await db.get("SELECT id FROM users WHERE share_code = ?", [shareCode]));
   }
 
-  const info = db
-    .prepare(
-      "INSERT INTO users (email, password_hash, role, share_code) VALUES (?, ?, ?, ?)",
-    )
-    .run(email, hashPassword(password), role, shareCode);
-  return {
-    id: Number(info.lastInsertRowid),
-    email,
-    role,
-    share_code: shareCode,
-  };
+  const { lastId } = await db.run(
+    "INSERT INTO users (email, password_hash, role, share_code) VALUES (?, ?, ?, ?)",
+    [email, hashPassword(password), role, shareCode],
+  );
+  return { id: lastId, email, role, share_code: shareCode };
 }
 
-export function authenticate(email: string, password: string): UserRow | null {
-  const row = getDb()
-    .prepare(
-      "SELECT id, email, password_hash, role, share_code FROM users WHERE email = ?",
-    )
-    .get(email) as (UserRow & { password_hash: string }) | undefined;
+export async function authenticate(
+  email: string,
+  password: string,
+): Promise<UserRow | null> {
+  const db = await getDriver();
+  const row = await db.get<UserRow & { password_hash: string }>(
+    "SELECT id, email, password_hash, role, share_code FROM users WHERE email = ?",
+    [email],
+  );
   if (!row || !verifyPassword(password, row.password_hash)) return null;
   return {
     id: row.id,
@@ -75,35 +72,40 @@ export function authenticate(email: string, password: string): UserRow | null {
   };
 }
 
-export function getUser(id: number): UserRow | null {
-  const row = getDb()
-    .prepare("SELECT id, email, role, share_code FROM users WHERE id = ?")
-    .get(id) as UserRow | undefined;
+export async function getUser(id: number): Promise<UserRow | null> {
+  const db = await getDriver();
+  const row = await db.get<UserRow>(
+    "SELECT id, email, role, share_code FROM users WHERE id = ?",
+    [id],
+  );
   return row ?? null;
 }
 
 /** Caretaker links to a recovery user via that user's share code (consent). */
-export function linkByCode(caretakerId: number, code: string): UserRow {
-  const db = getDb();
-  const target = db
-    .prepare(
-      "SELECT id, email, role, share_code FROM users WHERE share_code = ? AND role = 'user'",
-    )
-    .get(code) as UserRow | undefined;
+export async function linkByCode(
+  caretakerId: number,
+  code: string,
+): Promise<UserRow> {
+  const db = await getDriver();
+  const target = await db.get<UserRow>(
+    "SELECT id, email, role, share_code FROM users WHERE share_code = ? AND role = 'user'",
+    [code],
+  );
   if (!target) throw new Error("code_not_found");
-  db.prepare(
+  await db.run(
     "INSERT OR IGNORE INTO links (caretaker_id, user_id) VALUES (?, ?)",
-  ).run(caretakerId, target.id);
+    [caretakerId, target.id],
+  );
   return target;
 }
 
-export function linkedUsers(caretakerId: number): UserRow[] {
-  return getDb()
-    .prepare(
-      `SELECT u.id, u.email, u.role, u.share_code FROM links l
-       JOIN users u ON u.id = l.user_id WHERE l.caretaker_id = ?`,
-    )
-    .all(caretakerId) as UserRow[];
+export async function linkedUsers(caretakerId: number): Promise<UserRow[]> {
+  const db = await getDriver();
+  return db.all<UserRow>(
+    `SELECT u.id, u.email, u.role, u.share_code FROM links l
+     JOIN users u ON u.id = l.user_id WHERE l.caretaker_id = ?`,
+    [caretakerId],
+  );
 }
 
 // Scrub every string field before anything is persisted — transcripts and
@@ -116,14 +118,17 @@ function scrubPayload(payload: Record<string, unknown>): Record<string, unknown>
   return out;
 }
 
-export function logEvent(
+export async function logEvent(
   userId: number,
   type: "checkin" | "voice" | "sos" | "location",
   payload: Record<string, unknown>,
-): void {
-  getDb()
-    .prepare("INSERT INTO events (user_id, type, payload) VALUES (?, ?, ?)")
-    .run(userId, type, JSON.stringify(scrubPayload(payload)));
+): Promise<void> {
+  const db = await getDriver();
+  await db.run("INSERT INTO events (user_id, type, payload) VALUES (?, ?, ?)", [
+    userId,
+    type,
+    JSON.stringify(scrubPayload(payload)),
+  ]);
 }
 
 /**
@@ -131,30 +136,26 @@ export function logEvent(
  * - caretaker: events of users linked to them (only those).
  * - user: their own events.
  */
-export function feedFor(
+export async function feedFor(
   viewer: { userId: number; role: "user" | "caretaker" },
   limit = 50,
-): EventRow[] {
-  const db = getDb();
+): Promise<EventRow[]> {
+  const db = await getDriver();
   const rows =
     viewer.role === "caretaker"
-      ? db
-          .prepare(
-            `SELECT e.id, e.user_id, u.email AS user_email, e.type, e.payload, e.created_at
-             FROM events e
-             JOIN links l ON l.user_id = e.user_id AND l.caretaker_id = ?
-             JOIN users u ON u.id = e.user_id
-             ORDER BY e.id DESC LIMIT ?`,
-          )
-          .all(viewer.userId, limit)
-      : db
-          .prepare(
-            `SELECT e.id, e.user_id, u.email AS user_email, e.type, e.payload, e.created_at
-             FROM events e JOIN users u ON u.id = e.user_id
-             WHERE e.user_id = ? ORDER BY e.id DESC LIMIT ?`,
-          )
-          .all(viewer.userId, limit);
-  return (rows as Array<Omit<EventRow, "payload"> & { payload: string }>).map(
-    (r) => ({ ...r, payload: JSON.parse(r.payload) }),
-  );
+      ? await db.all<Omit<EventRow, "payload"> & { payload: string }>(
+          `SELECT e.id, e.user_id, u.email AS user_email, e.type, e.payload, e.created_at
+           FROM events e
+           JOIN links l ON l.user_id = e.user_id AND l.caretaker_id = ?
+           JOIN users u ON u.id = e.user_id
+           ORDER BY e.id DESC LIMIT ?`,
+          [viewer.userId, limit],
+        )
+      : await db.all<Omit<EventRow, "payload"> & { payload: string }>(
+          `SELECT e.id, e.user_id, u.email AS user_email, e.type, e.payload, e.created_at
+           FROM events e JOIN users u ON u.id = e.user_id
+           WHERE e.user_id = ? ORDER BY e.id DESC LIMIT ?`,
+          [viewer.userId, limit],
+        );
+  return rows.map((r) => ({ ...r, payload: JSON.parse(r.payload) }));
 }

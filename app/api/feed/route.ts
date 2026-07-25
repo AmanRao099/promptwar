@@ -9,9 +9,14 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const session = getSession();
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const events = feedFor({ userId: session.userId, role: session.role });
-  return NextResponse.json(
-    { events },
-    { headers: { "cache-control": "no-store" } },
-  );
+  try {
+    const events = await feedFor({ userId: session.userId, role: session.role });
+    return NextResponse.json(
+      { events },
+      { headers: { "cache-control": "no-store" } },
+    );
+  } catch (err) {
+    console.error("[feed] storage error", err);
+    return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
+  }
 }
