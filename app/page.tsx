@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Icon } from "@/components/ui/Icon";
 
 const PERSONAS = [
   {
@@ -6,56 +7,74 @@ const PERSONAS = [
     title: "I'm in recovery",
     body: "Riding out a craving right now, or getting ahead of one. Two taps for words and grounding.",
     cta: "Open my space",
-    ready: true,
+    icon: "dashboard_customize",
+    accent: "primary",
   },
   {
     href: "/caregiver",
     title: "I'm supporting someone",
     body: "A hard moment with a loved one. Get the exact words, tone, and posture to steady it.",
     cta: "Open co-pilot",
-    ready: true,
+    icon: "record_voice_over",
+    accent: "secondary",
   },
-];
+] as const;
 
 export default function Home() {
   return (
-    <main className="mx-auto flex min-h-full max-w-3xl flex-col justify-center px-4 py-12">
-      <p className="text-sm font-bold uppercase tracking-widest text-haven-accent">
-        HavenAI
-      </p>
-      <h1 className="mt-2 text-4xl font-bold leading-tight text-haven-text sm:text-5xl">
+    <main className="mx-auto flex min-h-full max-w-5xl flex-col justify-center px-margin-mobile py-stack-lg md:px-margin-desktop">
+      <div className="flex items-center gap-3">
+        <Icon name="healing" className="text-3xl text-primary" />
+        <span className="text-label-lg uppercase tracking-widest text-primary">
+          HavenAI
+        </span>
+      </div>
+
+      <h1 className="mt-4 text-headline-lg-mobile leading-tight text-on-surface md:text-headline-lg">
         Steady ground, one tap away.
       </h1>
-      <p className="mt-4 max-w-xl text-xl text-haven-muted">
+      <p className="mt-4 max-w-xl text-body-lg text-on-surface-variant">
         A calm companion for the hardest minutes — for people in recovery from
         substance use, and for the people holding them up.
       </p>
 
-      <div className="mt-10 grid gap-4 sm:grid-cols-2">
+      <div className="mt-stack-lg grid gap-4 md:grid-cols-2">
         {PERSONAS.map((p) => (
           <Link
             key={p.href}
             href={p.href}
-            className="group flex min-h-touch flex-col rounded-2xl border border-haven-border bg-haven-surface p-6 transition hover:border-haven-accent hover:bg-haven-surfaceHi"
+            className="group flex min-h-touch flex-col rounded-2xl border-2 border-outline-variant bg-surface-container p-6 transition-all hover:border-primary hover:bg-surface-container-high active:scale-[0.99] md:p-8"
           >
-            <h2 className="text-2xl font-bold text-haven-text">{p.title}</h2>
-            <p className="mt-2 flex-1 text-base text-haven-muted">{p.body}</p>
-            <span className="mt-4 inline-flex items-center gap-2 text-lg font-semibold text-haven-accent">
+            <span
+              className={`mb-4 inline-flex h-14 w-14 items-center justify-center rounded-xl ${
+                p.accent === "primary"
+                  ? "bg-primary/20 text-primary"
+                  : "bg-secondary/20 text-secondary"
+              }`}
+            >
+              <Icon name={p.icon} fill className="text-3xl" />
+            </span>
+            <h2 className="text-headline-md text-on-surface">{p.title}</h2>
+            <p className="mt-2 flex-1 text-body-md text-on-surface-variant">
+              {p.body}
+            </p>
+            <span
+              className={`mt-4 inline-flex items-center gap-2 text-label-lg ${
+                p.accent === "primary" ? "text-primary" : "text-secondary"
+              }`}
+            >
               {p.cta}
-              {!p.ready && (
-                <span className="rounded bg-haven-surfaceHi px-2 py-0.5 text-xs font-medium text-haven-muted">
-                  soon
-                </span>
-              )}
-              <span aria-hidden="true">→</span>
+              <Icon name="arrow_forward" aria-hidden />
             </span>
           </Link>
         ))}
       </div>
 
-      <p className="mt-10 text-sm text-haven-muted">
-        In immediate danger? Call or text <strong className="text-haven-text">988</strong>{" "}
-        (Suicide &amp; Crisis Lifeline) or <strong className="text-haven-text">911</strong>.
+      <p className="mt-stack-lg flex items-center gap-2 text-sm text-on-surface-variant">
+        <Icon name="emergency_home" className="text-error" />
+        In immediate danger? Call or text{" "}
+        <strong className="text-on-surface">988</strong> (Suicide &amp; Crisis
+        Lifeline) or <strong className="text-on-surface">911</strong>.
       </p>
     </main>
   );

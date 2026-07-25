@@ -1,5 +1,12 @@
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "HavenAI — steady ground, one tap away",
@@ -8,7 +15,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0e14",
+  themeColor: "#09090B",
   width: "device-width",
   initialScale: 1,
 };
@@ -19,8 +26,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="min-h-full">{children}</body>
+    <html lang="en" className={`dark ${inter.variable}`}>
+      <body className="min-h-full bg-background font-sans text-on-background antialiased">
+        {children}
+      </body>
     </html>
   );
 }

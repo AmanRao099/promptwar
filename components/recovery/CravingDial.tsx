@@ -6,15 +6,11 @@ import { useRovingRadio } from "@/lib/client/useRovingRadio";
 
 const CRAVING_VALUES = cravingLevels.map((l) => l.value);
 
-const TONE_RING: Record<string, string> = {
-  calm: "border-haven-calm",
-  warn: "border-haven-warn",
-  danger: "border-haven-danger",
-};
-const TONE_FILL: Record<string, string> = {
-  calm: "bg-haven-calm/20",
-  warn: "bg-haven-warn/20",
-  danger: "bg-haven-danger/20",
+// Map the config tone onto Material tokens.
+const TONE: Record<string, { ring: string; fill: string; text: string }> = {
+  calm: { ring: "border-secondary", fill: "bg-secondary/20", text: "text-secondary" },
+  warn: { ring: "border-primary", fill: "bg-primary/20", text: "text-primary" },
+  danger: { ring: "border-error", fill: "bg-error/20", text: "text-error" },
 };
 
 // One-tap craving intensity dial. Options come from schema-validated config.
@@ -27,50 +23,56 @@ export function CravingDial() {
     setCraving,
   );
 
+  const activeTone = cravingLevels.find((l) => l.value === selected)?.tone ?? "warn";
+
   return (
-    <fieldset>
-      <legend className="text-lg font-semibold text-haven-text">
-        How strong is the craving right now?
-      </legend>
-      <div
-        role="radiogroup"
-        aria-label="Craving intensity"
-        className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-5"
-      >
-        {cravingLevels.map((lvl, index) => {
-          const active = selected === lvl.value;
-          return (
-            <button
-              key={lvl.id}
-              type="button"
-              role="radio"
-              aria-checked={active}
-              aria-label={`${lvl.label}. ${lvl.helper}`}
-              tabIndex={getTabIndex(index)}
-              onKeyDown={onKeyDown}
-              onClick={() => setCraving(lvl.value)}
-              className={[
-                "min-h-touch rounded-xl border-2 px-4 py-4 text-left transition",
-                TONE_RING[lvl.tone],
-                active ? TONE_FILL[lvl.tone] : "bg-haven-surface hover:bg-haven-surfaceHi",
-              ].join(" ")}
-            >
-              <span
-                aria-hidden="true"
-                className="block text-2xl font-black text-haven-text"
+    <div className="rounded-2xl border-2 border-outline-variant bg-surface-container p-6 md:p-8">
+      <fieldset>
+        <div className="mb-6 flex items-center justify-between">
+          <legend className="text-headline-md text-on-surface">Craving level</legend>
+          <span className={`text-4xl font-extrabold ${TONE[activeTone].text}`}>
+            {selected ?? "—"}
+          </span>
+        </div>
+        <div
+          role="radiogroup"
+          aria-label="Craving intensity"
+          className="grid grid-cols-1 gap-3 sm:grid-cols-5"
+        >
+          {cravingLevels.map((lvl, index) => {
+            const active = selected === lvl.value;
+            const tone = TONE[lvl.tone];
+            return (
+              <button
+                key={lvl.id}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                aria-label={`${lvl.label}. ${lvl.helper}`}
+                tabIndex={getTabIndex(index)}
+                onKeyDown={onKeyDown}
+                onClick={() => setCraving(lvl.value)}
+                className={[
+                  "min-h-touch rounded-xl border-2 px-4 py-4 text-left transition-all active:scale-95",
+                  tone.ring,
+                  active ? tone.fill : "bg-surface-container-low hover:bg-surface-container-high",
+                ].join(" ")}
               >
-                {lvl.value}
-              </span>
-              <span className="block text-base font-semibold text-haven-text">
-                {lvl.label}
-              </span>
-              <span className="mt-1 block text-sm text-haven-muted">
-                {lvl.helper}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </fieldset>
+                <span aria-hidden="true" className={`block text-2xl font-black ${tone.text}`}>
+                  {lvl.value}
+                </span>
+                <span className="block text-label-lg text-on-surface">{lvl.label}</span>
+                <span className="mt-1 block text-sm text-on-surface-variant">
+                  {lvl.helper}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-4 text-sm italic text-on-surface-variant">
+          Higher levels trigger an active grounding sequence.
+        </p>
+      </fieldset>
+    </div>
   );
 }

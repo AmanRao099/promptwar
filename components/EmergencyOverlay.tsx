@@ -1,40 +1,47 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { Icon } from "./ui/Icon";
 
 // Hardcoded crisis overlay. ZERO LLM dependency by design — rendered when the
 // deterministic fail-safe (lib/safety/failSafe.ts) trips. Content here must
-// never be generated.
+// never be generated. No fabricated dispatch/GPS/medical data is shown.
 
 const HOTLINES = [
   {
-    id: "988",
-    label: "988 Suicide & Crisis Lifeline",
-    detail: "Call or text 988 — 24/7, free, confidential",
-    href: "tel:988",
-    action: "Call 988",
-  },
-  {
     id: "911",
-    label: "Medical emergency",
+    label: "Call 911 / paramedics",
     detail: "If someone is unresponsive or not breathing",
     href: "tel:911",
-    action: "Call 911",
+    action: "911",
+    icon: "emergency",
+    tone: "error" as const,
+  },
+  {
+    id: "988",
+    label: "Call 988 Crisis Lifeline",
+    detail: "Call or text 988 — 24/7, free, confidential",
+    href: "tel:988",
+    action: "988",
+    icon: "support_agent",
+    tone: "secondary" as const,
   },
   {
     id: "text",
-    label: "Crisis Text Line",
+    label: "Text the Crisis Line",
     detail: "Text HOME to 741741",
     href: "sms:741741?&body=HOME",
-    action: "Text 741741",
+    action: "741741",
+    icon: "chat_bubble",
+    tone: "secondary" as const,
   },
 ];
 
 export function EmergencyOverlay({ onDismiss }: { onDismiss?: () => void }) {
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // Move focus into the dialog on open, restore it on close, trap Tab inside,
-  // and let Escape dismiss (when dismissible). Standard modal a11y.
+  // Move focus into the dialog on open, restore on close, trap Tab, Escape to
+  // dismiss (when dismissible). Standard modal a11y.
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
     const panel = panelRef.current;
@@ -73,52 +80,70 @@ export function EmergencyOverlay({ onDismiss }: { onDismiss?: () => void }) {
       aria-modal="true"
       aria-labelledby="emergency-title"
       aria-describedby="emergency-desc"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950/90 p-4 md:p-10"
     >
       <div
         ref={panelRef}
-        className="w-full max-w-lg rounded-2xl border-2 border-haven-danger bg-haven-dangerBg p-6 shadow-2xl"
+        className="animate-pulse-red flex w-full max-w-2xl flex-col overflow-hidden rounded-xl border-4 border-error bg-surface shadow-2xl"
       >
-        <h2 id="emergency-title" className="text-2xl font-bold text-haven-text">
-          Let&apos;s get help right now
-        </h2>
-        <p id="emergency-desc" className="mt-2 text-lg text-haven-muted">
-          What you described needs a real person immediately. You are not alone
-          in this.
-        </p>
-
-        <ul className="mt-6 space-y-3">
-          {HOTLINES.map((h) => (
-            <li key={h.id}>
-              <a
-                href={h.href}
-                className="flex min-h-touch items-center justify-between gap-4 rounded-xl border border-haven-danger bg-haven-surface px-5 py-4 text-left transition hover:bg-haven-surfaceHi focus-visible:bg-haven-surfaceHi"
-              >
-                <span>
-                  <span className="block text-lg font-semibold text-haven-text">
-                    {h.label}
-                  </span>
-                  <span className="block text-base text-haven-muted">
-                    {h.detail}
-                  </span>
-                </span>
-                <span className="shrink-0 rounded-lg bg-haven-danger px-4 py-2 text-base font-bold text-black">
-                  {h.action}
-                </span>
-              </a>
-            </li>
-          ))}
-        </ul>
-
-        {onDismiss && (
-          <button
-            type="button"
-            onClick={onDismiss}
-            className="mt-6 min-h-touch w-full rounded-xl border border-haven-border px-4 py-3 text-base font-medium text-haven-muted hover:bg-haven-surfaceHi"
+        <header className="bg-error px-6 py-5 text-center">
+          <h2
+            id="emergency-title"
+            className="text-emergency-action uppercase tracking-wider text-[#3a0000]"
           >
-            I&apos;m safe now — go back
-          </button>
-        )}
+            Emergency Safety Override
+          </h2>
+        </header>
+
+        <div className="flex flex-col gap-stack-md p-margin-mobile md:p-10">
+          <p id="emergency-desc" className="text-body-lg text-on-surface-variant">
+            What you described needs a real person right now. You are not alone.
+            The AI is bypassed for your safety.
+          </p>
+
+          <ul className="flex flex-col gap-4">
+            {HOTLINES.map((h) => (
+              <li key={h.id}>
+                <a
+                  href={h.href}
+                  className={[
+                    "group flex min-h-[64px] items-center justify-between gap-4 rounded-lg px-5 py-4 text-left transition-all active:scale-[0.98]",
+                    h.tone === "error"
+                      ? "bg-error text-[#3a0000]"
+                      : "bg-secondary-container text-on-secondary-container",
+                  ].join(" ")}
+                >
+                  <span className="flex items-center gap-3">
+                    <Icon name={h.icon} fill className="text-3xl" />
+                    <span>
+                      <span className="block text-lg font-bold">{h.label}</span>
+                      <span className="block text-sm opacity-80">{h.detail}</span>
+                    </span>
+                  </span>
+                  <span className="text-emergency-action shrink-0">{h.action}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+
+          {onDismiss && (
+            <button
+              type="button"
+              onClick={onDismiss}
+              className="flex min-h-touch w-full items-center justify-center gap-2 rounded-lg border-2 border-outline-variant px-4 py-3 text-label-lg text-on-surface transition-colors hover:bg-surface-container-highest"
+            >
+              <Icon name="close" />
+              I&apos;m safe now — go back
+            </button>
+          )}
+        </div>
+
+        <footer className="flex items-center justify-center gap-2 border-t border-outline-variant bg-surface-container-lowest px-6 py-4">
+          <Icon name="verified_user" className="text-sm text-on-surface-variant" />
+          <p className="text-center text-xs uppercase tracking-widest text-on-surface-variant">
+            Bypassed AI engine for immediate safety
+          </p>
+        </footer>
       </div>
     </div>
   );

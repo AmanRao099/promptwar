@@ -12,12 +12,12 @@ body {
 }
 
 body {
-  @apply bg-haven-bg text-haven-text antialiased;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Visible, high-contrast focus ring for keyboard users (a11y). */
 :focus-visible {
-  outline: 3px solid theme("colors.haven.accent");
+  outline: 3px solid theme("colors.primary");
   outline-offset: 2px;
 }
 
@@ -26,6 +26,7 @@ body {
   *::before,
   *::after {
     animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
 }

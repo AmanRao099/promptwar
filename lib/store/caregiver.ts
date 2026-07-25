@@ -26,6 +26,7 @@ interface CaregiverState {
   setTag: (id: string) => void;
   setNote: (v: string) => void;
   reset: () => void;
+  showEmergency: () => void;
   generate: () => Promise<void>;
 }
 
@@ -46,6 +47,13 @@ export const useCaregiverStore = create<CaregiverState>((set, get) => ({
 
   setTag: (id) => set({ tagId: id }),
   setNote: (v) => set({ note: v }),
+
+  // Manual SOS — opens the hardcoded emergency overlay (no model involved).
+  showEmergency: () => {
+    inflight?.abort();
+    inflight = null;
+    set({ status: "crisis", crisisCategories: [] });
+  },
 
   reset: () => {
     inflight?.abort();
