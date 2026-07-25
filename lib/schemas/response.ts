@@ -18,6 +18,17 @@ export const recoveryScriptSchema = z.object({
 
 export type RecoveryScript = z.infer<typeof recoveryScriptSchema>;
 
+// Reply to a free-form spoken check-in (voice chat on /recovery).
+export const voiceReplySchema = z.object({
+  // Reflects back what was heard — validation first.
+  reflection: z.string().min(1),
+  // Concrete next steps, small and doable right now.
+  guidance: z.array(z.string().min(1)).min(1).max(5),
+  affirmation: z.string().min(1),
+});
+
+export type VoiceReply = z.infer<typeof voiceReplySchema>;
+
 export const caregiverScriptSchema = z.object({
   // Word-for-word lines the caregiver can say aloud.
   sayThis: z.array(z.string().min(1)).min(1).max(5),

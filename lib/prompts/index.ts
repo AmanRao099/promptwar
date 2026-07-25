@@ -1,5 +1,6 @@
 export { refusalSystemPrompt } from "./refusal";
 export { caregiverSystemPrompt } from "./caregiver";
+export { voiceSystemPrompt, buildVoiceUserTurn } from "./voice";
 
 import { cravingLevels } from "@/lib/config/craving";
 import { somaticPoints } from "@/lib/config/somatic";

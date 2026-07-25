@@ -20,6 +20,13 @@ export const generateScriptRequestSchema = z.object({
 
 export type GenerateScriptRequest = z.infer<typeof generateScriptRequestSchema>;
 
+// Payload for /api/voice-support (free-form spoken check-in, recovery persona).
+export const voiceRequestSchema = z.object({
+  transcript: z.string().trim().min(2).max(1000),
+});
+
+export type VoiceRequest = z.infer<typeof voiceRequestSchema>;
+
 // Payload for /api/caregiver-copilot (caregiver persona).
 export const caregiverRequestSchema = z.object({
   tagId: z.enum(tagIds),

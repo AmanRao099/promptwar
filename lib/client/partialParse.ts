@@ -66,6 +66,20 @@ export function parseRecoveryPartial(text: string): PartialRecovery {
   };
 }
 
+export interface PartialVoice {
+  reflection?: string;
+  guidance: string[];
+  affirmation?: string;
+}
+
+export function parseVoicePartial(text: string): PartialVoice {
+  return {
+    reflection: extractString(text, "reflection"),
+    guidance: extractStringArray(text, "guidance"),
+    affirmation: extractString(text, "affirmation"),
+  };
+}
+
 export interface PartialCaregiver {
   sayThis: string[];
   toneAdvice?: string;
