@@ -2,6 +2,9 @@
 
 import { cravingLevels } from "@/lib/config/craving";
 import { useRecoveryStore } from "@/lib/store/recovery";
+import { useRovingRadio } from "@/lib/client/useRovingRadio";
+
+const CRAVING_VALUES = cravingLevels.map((l) => l.value);
 
 const TONE_RING: Record<string, string> = {
   calm: "border-haven-calm",
@@ -18,6 +21,11 @@ const TONE_FILL: Record<string, string> = {
 export function CravingDial() {
   const selected = useRecoveryStore((s) => s.cravingValue);
   const setCraving = useRecoveryStore((s) => s.setCraving);
+  const { onKeyDown, getTabIndex } = useRovingRadio(
+    CRAVING_VALUES,
+    selected,
+    setCraving,
+  );
 
   return (
     <fieldset>
@@ -29,7 +37,7 @@ export function CravingDial() {
         aria-label="Craving intensity"
         className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-5"
       >
-        {cravingLevels.map((lvl) => {
+        {cravingLevels.map((lvl, index) => {
           const active = selected === lvl.value;
           return (
             <button
@@ -38,6 +46,8 @@ export function CravingDial() {
               role="radio"
               aria-checked={active}
               aria-label={`${lvl.label}. ${lvl.helper}`}
+              tabIndex={getTabIndex(index)}
+              onKeyDown={onKeyDown}
               onClick={() => setCraving(lvl.value)}
               className={[
                 "min-h-touch rounded-xl border-2 px-4 py-4 text-left transition",

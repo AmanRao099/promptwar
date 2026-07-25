@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 // Hardcoded crisis overlay. ZERO LLM dependency by design — rendered when the
 // deterministic fail-safe (lib/safety/failSafe.ts) trips. Content here must
 // never be generated.
@@ -29,6 +31,42 @@ const HOTLINES = [
 ];
 
 export function EmergencyOverlay({ onDismiss }: { onDismiss?: () => void }) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Move focus into the dialog on open, restore it on close, trap Tab inside,
+  // and let Escape dismiss (when dismissible). Standard modal a11y.
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const panel = panelRef.current;
+    const focusables = panel?.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled])',
+    );
+    focusables?.[0]?.focus();
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && onDismiss) {
+        onDismiss();
+        return;
+      }
+      if (e.key !== "Tab" || !focusables || focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      previouslyFocused?.focus?.();
+    };
+  }, [onDismiss]);
+
   return (
     <div
       role="alertdialog"
@@ -37,7 +75,10 @@ export function EmergencyOverlay({ onDismiss }: { onDismiss?: () => void }) {
       aria-describedby="emergency-desc"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
     >
-      <div className="w-full max-w-lg rounded-2xl border-2 border-haven-danger bg-haven-dangerBg p-6 shadow-2xl">
+      <div
+        ref={panelRef}
+        className="w-full max-w-lg rounded-2xl border-2 border-haven-danger bg-haven-dangerBg p-6 shadow-2xl"
+      >
         <h2 id="emergency-title" className="text-2xl font-bold text-haven-text">
           Let&apos;s get help right now
         </h2>

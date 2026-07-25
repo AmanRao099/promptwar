@@ -33,6 +33,20 @@ describe("CravingDial", () => {
     expect(useRecoveryStore.getState().cravingValue).toBe(4);
   });
 
+  it("supports arrow-key navigation (roving radiogroup)", () => {
+    render(<CravingDial />);
+    // No selection yet: first option is the tab stop.
+    const first = screen.getByRole("radio", { name: /a flicker/i });
+    expect(first).toHaveAttribute("tabindex", "0");
+    fireEvent.keyDown(first, { key: "ArrowRight" });
+    expect(useRecoveryStore.getState().cravingValue).toBe(2);
+    fireEvent.keyDown(first, { key: "ArrowLeft" });
+    expect(useRecoveryStore.getState().cravingValue).toBe(1);
+    // Wraps backward from first to last.
+    fireEvent.keyDown(first, { key: "ArrowLeft" });
+    expect(useRecoveryStore.getState().cravingValue).toBe(5);
+  });
+
   it("has no axe accessibility violations", async () => {
     const { container } = render(<CravingDial />);
     expect(await axe(container)).toHaveNoViolations();

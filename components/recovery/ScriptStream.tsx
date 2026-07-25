@@ -2,6 +2,7 @@
 
 import { useRecoveryStore } from "@/lib/store/recovery";
 import { BoundaryCard } from "@/components/BoundaryCard";
+import { ErrorRetry } from "@/components/ErrorRetry";
 import { AudioGroundingButton } from "./AudioGroundingButton";
 
 // Live display of the streaming recovery script. Reads partial state so lines
@@ -10,8 +11,10 @@ export function ScriptStream() {
   const status = useRecoveryStore((s) => s.status);
   const partial = useRecoveryStore((s) => s.partial);
   const mode = useRecoveryStore((s) => s.mode);
+  const generate = useRecoveryStore((s) => s.generate);
 
   if (status === "idle") return null;
+  if (status === "error") return <ErrorRetry onRetry={generate} />;
 
   const { boundaryLines, grounding, affirmation } = partial;
   const groundingLines = [grounding.intro, ...grounding.steps].filter(

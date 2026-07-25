@@ -62,8 +62,24 @@ Scope: **all 6 phases complete.** Live-verified in browser (recovery + caregiver
 - [x] jest-axe automated a11y scans (0 violations) on interactive components
 - [x] Route integration tests (Phase 3) cover crisis bypass + mock streaming
 
+## [x] Phase 7: Production Hardening & Deployability
+- [x] `lib/http/streamRoute.ts` — shared route handler; both routes deduped (rate-limit→parse→validate→**crisis bypass**→scrub→stream)
+- [x] `lib/http/rateLimit.ts` — per-IP sliding-window limiter + `Retry-After`/`x-ratelimit-remaining`
+- [x] `AbortController` in both stores — cancels in-flight/racing streams on re-tap & reset
+- [x] `components/ErrorRetry.tsx` — fixes silent error state; one-tap retry (selections preserved)
+- [x] `lib/client/useRovingRadio.ts` — WCAG arrow-key radiogroup nav (both dials)
+- [x] `EmergencyOverlay` — focus trap, autofocus, Escape-to-dismiss, focus restore
+- [x] `next.config.mjs` — `output: standalone`, CSP + HSTS + X-Frame-Options + nosniff + Permissions-Policy, `poweredByHeader: false`
+- [x] `app/api/health/route.ts` — liveness probe (never leaks key)
+- [x] `Dockerfile` (multi-stage, non-root, healthcheck) + `.dockerignore` + `public/robots.txt`
+- [x] `.eslintrc.json` — `next lint` passes clean
+- [x] `README.md` — architecture, env, deploy (Vercel + Docker)
+- [x] Tests added: `rateLimit.test.ts`, `health.test.ts`, roving-radio keyboard nav → **55 tests**
+
 ### Final verification
 - `npx tsc --noEmit` → 0 errors
-- `npx next build` → succeeds, 6 routes (`/`, `/recovery`, `/caregiver`, 2 API, not-found)
-- `npx vitest run` → **48/48 pass** across 6 files (safety 17 · schemas 11 · partialParse 6 · components 9 · routes 5)
-- Browser: recovery flow (dial→somatic→streamed script→audio→crisis overlay) and caregiver flow (tag→streamed script→tone/posture/avoid→audio) both work end-to-end
+- `npx next lint` → **0 warnings/errors**
+- `npx next build` → succeeds, standalone output, 7 routes (adds `/api/health`)
+- `npx vitest run` → **55/55 pass** across 8 files
+- Live prod server: all 6 security headers present, `X-Powered-By` absent, `/api/health` ok, `x-ratelimit-remaining` emitted
+- Browser: recovery + caregiver flows both work end-to-end (verified earlier build)

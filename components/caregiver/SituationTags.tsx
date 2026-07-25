@@ -2,6 +2,9 @@
 
 import { situationTags } from "@/lib/config/tags";
 import { useCaregiverStore } from "@/lib/store/caregiver";
+import { useRovingRadio } from "@/lib/client/useRovingRadio";
+
+const TAG_IDS = situationTags.map((t) => t.id);
 
 const SEVERITY_RING: Record<string, string> = {
   support: "border-haven-calm",
@@ -18,6 +21,7 @@ const SEVERITY_FILL: Record<string, string> = {
 export function SituationTags() {
   const selected = useCaregiverStore((s) => s.tagId);
   const setTag = useCaregiverStore((s) => s.setTag);
+  const { onKeyDown, getTabIndex } = useRovingRadio(TAG_IDS, selected, setTag);
 
   return (
     <fieldset>
@@ -29,7 +33,7 @@ export function SituationTags() {
         aria-label="Situation"
         className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2"
       >
-        {situationTags.map((tag) => {
+        {situationTags.map((tag, index) => {
           const active = selected === tag.id;
           return (
             <button
@@ -38,6 +42,8 @@ export function SituationTags() {
               role="radio"
               aria-checked={active}
               aria-label={`${tag.label}. ${tag.context}`}
+              tabIndex={getTabIndex(index)}
+              onKeyDown={onKeyDown}
               onClick={() => setTag(tag.id)}
               className={[
                 "min-h-touch rounded-xl border-2 px-4 py-4 text-left transition",

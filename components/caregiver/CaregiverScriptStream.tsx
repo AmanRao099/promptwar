@@ -1,6 +1,7 @@
 "use client";
 
 import { useCaregiverStore } from "@/lib/store/caregiver";
+import { ErrorRetry } from "@/components/ErrorRetry";
 import { AudioGroundingButton } from "@/components/recovery/AudioGroundingButton";
 
 // Live display of the streaming caregiver script: word-for-word lines, tone,
@@ -9,8 +10,10 @@ export function CaregiverScriptStream() {
   const status = useCaregiverStore((s) => s.status);
   const partial = useCaregiverStore((s) => s.partial);
   const mode = useCaregiverStore((s) => s.mode);
+  const generate = useCaregiverStore((s) => s.generate);
 
   if (status === "idle") return null;
+  if (status === "error") return <ErrorRetry onRetry={generate} />;
 
   const { sayThis, toneAdvice, postureAdvice, avoid } = partial;
 

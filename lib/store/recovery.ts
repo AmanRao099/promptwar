@@ -36,6 +36,10 @@ const emptyPartial: PartialRecovery = {
   grounding: { steps: [] },
 };
 
+// Non-reactive: tracks the in-flight request so a new generate() or reset()
+// can cancel a stale stream instead of racing it.
+let inflight: AbortController | null = null;
+
 export const useRecoveryStore = create<RecoveryState>((set, get) => ({
   cravingValue: null,
   somaticId: null,
@@ -50,18 +54,26 @@ export const useRecoveryStore = create<RecoveryState>((set, get) => ({
   setSomatic: (id) => set({ somaticId: id }),
   setNote: (v) => set({ note: v }),
 
-  reset: () =>
+  reset: () => {
+    inflight?.abort();
+    inflight = null;
     set({
       status: "idle",
       mode: null,
       partial: emptyPartial,
       final: null,
       crisisCategories: [],
-    }),
+    });
+  },
 
   generate: async () => {
     const { cravingValue, somaticId, note } = get();
     if (cravingValue == null || somaticId == null) return;
+
+    // Cancel any prior stream so rapid re-taps don't race.
+    inflight?.abort();
+    const controller = new AbortController();
+    inflight = controller;
 
     set({
       status: "streaming",
@@ -76,13 +88,15 @@ export const useRecoveryStore = create<RecoveryState>((set, get) => ({
       res = await fetch("/api/generate-script", {
         method: "POST",
         headers: { "content-type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           cravingValue,
           somaticId,
           note: note.trim() ? note.trim() : undefined,
         }),
       });
-    } catch {
+    } catch (err) {
+      if ((err as Error)?.name === "AbortError") return;
       set({ status: "error" });
       return;
     }
@@ -121,9 +135,12 @@ export const useRecoveryStore = create<RecoveryState>((set, get) => ({
         acc += decoder.decode(value, { stream: true });
         set({ partial: parseRecoveryPartial(acc) });
       }
-    } catch {
+    } catch (err) {
+      if ((err as Error)?.name === "AbortError") return;
       set({ status: "error" });
       return;
+    } finally {
+      if (inflight === controller) inflight = null;
     }
 
     // Authoritative validate at end of stream.

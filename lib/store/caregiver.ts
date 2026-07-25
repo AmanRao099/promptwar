@@ -31,6 +31,10 @@ interface CaregiverState {
 
 const emptyPartial: PartialCaregiver = { sayThis: [], avoid: [] };
 
+// Non-reactive: tracks the in-flight request so a new generate() or reset()
+// can cancel a stale stream instead of racing it.
+let inflight: AbortController | null = null;
+
 export const useCaregiverStore = create<CaregiverState>((set, get) => ({
   tagId: null,
   note: "",
@@ -43,18 +47,25 @@ export const useCaregiverStore = create<CaregiverState>((set, get) => ({
   setTag: (id) => set({ tagId: id }),
   setNote: (v) => set({ note: v }),
 
-  reset: () =>
+  reset: () => {
+    inflight?.abort();
+    inflight = null;
     set({
       status: "idle",
       mode: null,
       partial: emptyPartial,
       final: null,
       crisisCategories: [],
-    }),
+    });
+  },
 
   generate: async () => {
     const { tagId, note } = get();
     if (tagId == null) return;
+
+    inflight?.abort();
+    const controller = new AbortController();
+    inflight = controller;
 
     set({
       status: "streaming",
@@ -69,12 +80,14 @@ export const useCaregiverStore = create<CaregiverState>((set, get) => ({
       res = await fetch("/api/caregiver-copilot", {
         method: "POST",
         headers: { "content-type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           tagId,
           note: note.trim() ? note.trim() : undefined,
         }),
       });
-    } catch {
+    } catch (err) {
+      if ((err as Error)?.name === "AbortError") return;
       set({ status: "error" });
       return;
     }
@@ -112,9 +125,12 @@ export const useCaregiverStore = create<CaregiverState>((set, get) => ({
         acc += decoder.decode(value, { stream: true });
         set({ partial: parseCaregiverPartial(acc) });
       }
-    } catch {
+    } catch (err) {
+      if ((err as Error)?.name === "AbortError") return;
       set({ status: "error" });
       return;
+    } finally {
+      if (inflight === controller) inflight = null;
     }
 
     try {
