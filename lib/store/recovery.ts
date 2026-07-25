@@ -7,6 +7,7 @@ import {
   recoveryScriptSchema,
   type RecoveryScript,
 } from "@/lib/schemas/response";
+import { logActivity } from "@/lib/store/auth";
 
 export type RecoveryStatus =
   | "idle"
@@ -60,6 +61,7 @@ export const useRecoveryStore = create<RecoveryState>((set, get) => ({
     inflight?.abort();
     inflight = null;
     set({ status: "crisis", crisisCategories: [] });
+    logActivity("sos", { trigger: "manual" });
   },
 
   reset: () => {
@@ -120,6 +122,10 @@ export const useRecoveryStore = create<RecoveryState>((set, get) => ({
       const data = (await res.json()) as { crisis?: boolean; categories?: string[] };
       if (data.crisis) {
         set({ status: "crisis", crisisCategories: data.categories ?? [] });
+        logActivity("sos", {
+          trigger: "crisis-detect",
+          categories: (data.categories ?? []).join(","),
+        });
         return;
       }
       set({ status: "error" });
@@ -156,6 +162,11 @@ export const useRecoveryStore = create<RecoveryState>((set, get) => ({
       const obj = JSON.parse(acc);
       const validated = recoveryScriptSchema.parse(obj);
       set({ final: validated, partial: validated, status: "done" });
+      logActivity("checkin", {
+        cravingValue,
+        somaticId,
+        note: note.trim() || undefined,
+      });
     } catch {
       // Fell short of a full valid document. If usable lines streamed, keep
       // them; otherwise surface an honest error + retry (no fake content).

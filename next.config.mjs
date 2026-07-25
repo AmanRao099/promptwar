@@ -22,10 +22,10 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
-    // microphone=(self): the voice check-in uses SpeechRecognition on our own
-    // origin; everything else stays denied.
+    // microphone=(self): voice check-in (SpeechRecognition). geolocation=(self):
+    // emergency live-location share. Everything else stays denied.
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(self), geolocation=(), interest-cohort=()",
+    value: "camera=(), microphone=(self), geolocation=(self), interest-cohort=()",
   },
   {
     key: "Strict-Transport-Security",

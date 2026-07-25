@@ -24,6 +24,7 @@ import {
   Cross,
   Lightbulb,
   Check,
+  MapPin,
   HelpCircle,
   type LucideIcon,
 } from "lucide-react";
@@ -57,6 +58,8 @@ const MAP: Record<string, LucideIcon> = {
   medical_services: Cross,
   lightbulb: Lightbulb,
   check: Check,
+  emergency_share: MapPin,
+  location_on: MapPin,
 };
 
 // `fill` kept for API compatibility (Material used it); lucide is stroke-based

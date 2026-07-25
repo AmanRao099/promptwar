@@ -3,6 +3,7 @@
 import { useRecoveryStore } from "@/lib/store/recovery";
 import { CravingDial } from "@/components/recovery/CravingDial";
 import { VoiceChat } from "@/components/recovery/VoiceChat";
+import { ShareCodeCard } from "@/components/recovery/ShareCodeCard";
 import { SomaticSelector } from "@/components/recovery/SomaticSelector";
 import { ScriptStream } from "@/components/recovery/ScriptStream";
 import { EmergencyOverlay } from "@/components/EmergencyOverlay";
@@ -49,6 +50,7 @@ export default function RecoveryPage() {
         </div>
 
         <div className="mt-8 space-y-stack-md">
+          <ShareCodeCard />
           <VoiceChat />
           <CravingDial />
           <SomaticSelector />

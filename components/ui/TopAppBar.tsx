@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Icon } from "./Icon";
+import { AccountChip } from "./AccountChip";
 
 // Sticky branded header shared by both dashboards. `status` shows a small live
 // pill; `onEmergency` (optional) wires the emergency icon to open the overlay.
@@ -32,6 +33,7 @@ export function TopAppBar({
       </Link>
 
       <div className="flex items-center gap-3">
+        <AccountChip />
         <a
           href="tel:988"
           aria-label="Call or text 988, the Suicide and Crisis Lifeline"

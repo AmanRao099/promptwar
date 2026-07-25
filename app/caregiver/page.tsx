@@ -3,6 +3,7 @@
 import { useCaregiverStore } from "@/lib/store/caregiver";
 import { SituationTags } from "@/components/caregiver/SituationTags";
 import { CaregiverScriptStream } from "@/components/caregiver/CaregiverScriptStream";
+import { CaretakerFeed } from "@/components/caregiver/CaretakerFeed";
 import { EmergencyOverlay } from "@/components/EmergencyOverlay";
 import { TopAppBar } from "@/components/ui/TopAppBar";
 import { BottomNav } from "@/components/ui/BottomNav";
@@ -47,6 +48,7 @@ export default function CaregiverPage() {
         </div>
 
         <div className="mt-8 space-y-stack-md">
+          <CaretakerFeed />
           <SituationTags />
 
           <div className="rounded-2xl border-2 border-outline-variant bg-surface-container p-6 md:p-8">

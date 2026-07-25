@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "./ui/Icon";
+import { useAuthStore } from "@/lib/store/auth";
 
 // Hardcoded crisis overlay. ZERO LLM dependency by design — rendered when the
 // deterministic fail-safe (lib/safety/failSafe.ts) trips. Content here must
@@ -37,8 +38,41 @@ const HOTLINES = [
   },
 ];
 
+type LocationStatus = "idle" | "sending" | "sent" | "error";
+
 export function EmergencyOverlay({ onDismiss }: { onDismiss?: () => void }) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const user = useAuthStore((s) => s.user);
+  const [locStatus, setLocStatus] = useState<LocationStatus>("idle");
+
+  const canShareLocation =
+    user?.role === "user" &&
+    typeof navigator !== "undefined" &&
+    "geolocation" in navigator;
+
+  const sendLocation = () => {
+    setLocStatus("sending");
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await fetch("/api/location", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude,
+              accuracy: Math.round(pos.coords.accuracy),
+            }),
+          });
+          setLocStatus(res.ok ? "sent" : "error");
+        } catch {
+          setLocStatus("error");
+        }
+      },
+      () => setLocStatus("error"),
+      { enableHighAccuracy: true, timeout: 15000 },
+    );
+  };
 
   // Move focus into the dialog on open, restore on close, trap Tab, Escape to
   // dismiss (when dismissible). Standard modal a11y.
@@ -125,6 +159,29 @@ export function EmergencyOverlay({ onDismiss }: { onDismiss?: () => void }) {
               </li>
             ))}
           </ul>
+
+          {canShareLocation && (
+            <button
+              type="button"
+              onClick={sendLocation}
+              disabled={locStatus === "sending" || locStatus === "sent"}
+              className={[
+                "flex min-h-[56px] w-full items-center justify-center gap-3 rounded-lg border-2 px-4 py-3 text-label-lg transition-all active:scale-[0.98] disabled:cursor-default",
+                locStatus === "sent"
+                  ? "border-primary bg-primary/20 text-on-surface"
+                  : "border-primary text-on-surface hover:bg-surface-container-high",
+              ].join(" ")}
+            >
+              <Icon
+                name={locStatus === "sent" ? "check" : "emergency_share"}
+                className={locStatus === "sending" ? "animate-pulse" : undefined}
+              />
+              {locStatus === "idle" && "Send my live location to my caretaker"}
+              {locStatus === "sending" && "Getting your location…"}
+              {locStatus === "sent" && "Location sent to your caretaker"}
+              {locStatus === "error" && "Couldn't get location — tap to retry"}
+            </button>
+          )}
 
           {onDismiss && (
             <button

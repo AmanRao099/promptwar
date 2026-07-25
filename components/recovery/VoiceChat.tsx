@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { parseVoicePartial, type PartialVoice } from "@/lib/client/partialParse";
 import { voiceReplySchema } from "@/lib/schemas/response";
 import { useRecoveryStore } from "@/lib/store/recovery";
+import { logActivity } from "@/lib/store/auth";
 import { ErrorRetry } from "@/components/ErrorRetry";
 import { Icon } from "@/components/ui/Icon";
 
@@ -125,6 +126,7 @@ export function VoiceChat() {
       const validated = voiceReplySchema.parse(JSON.parse(acc));
       setReply(validated);
       setStatus("done");
+      logActivity("voice", { transcript: trimmed });
       // Voice in -> voice out: read the reply back.
       speak([validated.reflection, ...validated.guidance, validated.affirmation]);
     } catch {
