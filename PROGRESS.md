@@ -1,0 +1,69 @@
+# HavenAI — Build Progress
+
+Multi-modal GenAI recovery & prevention platform for Substance Use Disorder (SUD) recovery + caregivers.
+Stack: Next.js 14 App Router · TypeScript · Tailwind · Zustand · Zod · `@google/genai` (`gemini-2.0-flash`) · Vitest.
+
+Model note: spec pinned `gemini-1.5-flash`; using `gemini-2.0-flash` per build decision.
+Key-missing behavior: graceful mock fallback (route streams canned safe scripts when `GEMINI_API_KEY` absent).
+Scope: **all 6 phases complete.** Live-verified in browser (recovery + caregiver). Live Gemini blocked only by 429 quota on the supplied key — app auto-falls back to deterministic mock, zero code change needed when quota frees.
+
+---
+
+## [x] Phase 1: Next.js Setup, Env Validation (@google/genai) & Zod Schemas
+- [x] `package.json`, `tsconfig.json`, `next.config.mjs`, `tailwind.config.ts`, `postcss.config.mjs`
+- [x] `.env.example`, `.gitignore`
+- [x] `lib/env.ts` — Zod-validated environment (`GEMINI_API_KEY`, `GEMINI_MODEL`)
+- [x] `lib/schemas/request.ts` — API payload Zod schemas (generate-script, caregiver)
+- [x] `lib/schemas/response.ts` — Gemini structured-output Zod schemas
+- [x] `lib/config/somatic.ts`, `craving.ts`, `tags.ts` — schema-validated UI config (no hardcoding in components)
+- [x] `app/globals.css`, `app/layout.tsx`
+
+## [x] Phase 2: Safety Layer & Deterministic Fail-Safe Routing (Pre-LLM)
+- [x] `lib/safety/failSafe.ts` — deterministic crisis keyword detector, bypasses Gemini
+- [x] `lib/safety/scrubber.ts` — PII scrubber before any Gemini dispatch
+- [x] `tests/failSafe.test.ts`, `tests/scrubber.test.ts` — built first, safety before LLM (17 tests green)
+
+## [x] Phase 3: Route Handlers & Gemini Streaming Integration
+- [x] `lib/genai/client.ts` — `@google/genai` client + streaming helper + mock fallback
+- [x] `lib/genai/mocks.ts` — deterministic input-matched offline payloads
+- [x] `app/api/generate-script/route.ts` — refusal/boundary + grounding streaming (crisis bypass + scrub)
+- [x] `app/api/caregiver-copilot/route.ts` — caregiver de-escalation streaming (crisis bypass + scrub)
+- [x] `lib/prompts/refusal.ts`, `caregiver.ts`, `index.ts` — modular system prompts + user-turn builders
+
+## [x] Phase 4: Recovery UI (Zero-Touch)
+- [x] `lib/store/recovery.ts` — Zustand client state + streaming fetch
+- [x] `lib/client/partialParse.ts` — tolerant incremental JSON reveal
+- [x] `components/recovery/CravingDial.tsx` — 1-tap craving level
+- [x] `components/recovery/SomaticSelector.tsx` — body/somatic map selector
+- [x] `components/recovery/ScriptStream.tsx` — live streaming script display
+- [x] `components/recovery/AudioGroundingButton.tsx` — Web Speech API grounding
+- [x] `components/BoundaryCard.tsx` — high-contrast refusal cards
+- [x] `components/EmergencyOverlay.tsx` — 988/911 zero-LLM overlay
+- [x] `app/recovery/page.tsx`, `app/page.tsx` — persona landing + recovery dashboard
+- [x] `app/caregiver/page.tsx` — placeholder (full UI in Phase 5)
+
+### Verification (this pass)
+- `npx tsc --noEmit` → 0 errors
+- `npx next build` → succeeds, 6 routes emitted
+- `npx vitest run` → **22/22 pass** (safety 17 + route integration 5)
+- Live: `/recovery` 200; generate-script streams `x-haven-mode: mock`; emergency note returns `{crisis:true}` with **zero** model call
+
+## [x] Phase 5: Caregiver Co-Pilot UI
+- [x] `lib/store/caregiver.ts` — Zustand state + streaming fetch (crisis-aware)
+- [x] `components/caregiver/SituationTags.tsx` — severity-coded one-tap situation buttons
+- [x] `components/caregiver/CaregiverScriptStream.tsx` — word-for-word lines, tone/posture panels, avoid list, audio
+- [x] `app/caregiver/page.tsx` — full co-pilot dashboard + EmergencyOverlay dispatch
+- [x] Landing card flipped from "soon" to live
+
+## [x] Phase 6: Automated Tests & a11y Verification
+- [x] `tests/schemas.test.ts` — config integrity + request/response schema validation
+- [x] `tests/partialParse.test.ts` — incremental streaming-reveal parser
+- [x] `tests/components.test.tsx` — RTL: CravingDial, SituationTags, EmergencyOverlay, BoundaryCard
+- [x] jest-axe automated a11y scans (0 violations) on interactive components
+- [x] Route integration tests (Phase 3) cover crisis bypass + mock streaming
+
+### Final verification
+- `npx tsc --noEmit` → 0 errors
+- `npx next build` → succeeds, 6 routes (`/`, `/recovery`, `/caregiver`, 2 API, not-found)
+- `npx vitest run` → **48/48 pass** across 6 files (safety 17 · schemas 11 · partialParse 6 · components 9 · routes 5)
+- Browser: recovery flow (dial→somatic→streamed script→audio→crisis overlay) and caregiver flow (tag→streamed script→tone/posture/avoid→audio) both work end-to-end
