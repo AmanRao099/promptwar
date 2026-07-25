@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-// Structured shape we ask Gemini to emit (and that the mock mirrors).
-// Streamed to the client as NDJSON-ish incremental text, then the final
-// assembled JSON is validated against this schema.
+// Structured shape the LLM provider is instructed to emit. Streamed to the
+// client as incremental text, then the final assembled JSON is validated
+// against this schema.
 
 export const recoveryScriptSchema = z.object({
   // High-contrast, immediate refusal / boundary statements. Short.

@@ -2,8 +2,8 @@ import { z } from "zod";
 
 /**
  * Server-side environment validation. Runs on the server only (route handlers).
- * GEMINI_API_KEY is optional by design: when absent, the app degrades to
- * deterministic mock scripts (see lib/genai/client.ts) so demos work offline.
+ * A live LLM provider key (Groq or Gemini) is required — there is no offline
+ * mode; the server fails fast at startup when neither key is set.
  */
 const envSchema = z
   .object({

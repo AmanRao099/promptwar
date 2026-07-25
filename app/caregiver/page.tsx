@@ -68,11 +68,19 @@ export default function CaregiverPage() {
             type="button"
             disabled={!ready || busy}
             onClick={generate}
-            className="flex min-h-[64px] w-full items-center justify-center gap-3 rounded-xl bg-secondary text-emergency-action text-on-secondary transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex min-h-[64px] w-full items-center justify-center gap-3 rounded-xl bg-secondary text-xl font-bold text-on-secondary transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30"
           >
-            <Icon name={busy ? "hourglass_top" : "record_voice_over"} fill />
+            <Icon
+              name={busy ? "hourglass_top" : "record_voice_over"}
+              className={busy ? "animate-spin" : undefined}
+            />
             {busy ? "Coming to you…" : "Coach me through this"}
           </button>
+          {!ready && (
+            <p className="text-center text-sm text-on-surface-variant">
+              Tap what&apos;s happening above — then tap the button.
+            </p>
+          )}
 
           <div className="pt-stack-sm">
             <CaregiverScriptStream />

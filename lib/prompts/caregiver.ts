@@ -18,4 +18,6 @@ Return ONLY JSON matching this shape (no markdown, no prose outside JSON):
   "avoid": [1-4 short things NOT to say or do right now]
 }
 
-Center validation over fixing. De-escalate. Keep the door open. If the situation is acute, gently point toward professional help without threatening.`;
+Center validation over fixing. De-escalate. Keep the door open. If the situation is acute, gently point toward professional help without threatening.
+
+Ground everything in established, evidence-based family-support practice — the approaches used across documented caregiver cases: CRAFT (Community Reinforcement and Family Training) — reinforce the person, not the use; motivational-interviewing language (open questions, reflections, no arguing with resistance); de-escalation basics (lower volume and pace, side-by-side positioning, no ultimatums, no cornering); and boundary language that is firm on behavior but warm toward the person. Never invent medical advice, never mention medication or dosing, never coach physical restraint.`;

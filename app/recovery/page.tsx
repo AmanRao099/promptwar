@@ -71,11 +71,19 @@ export default function RecoveryPage() {
           type="button"
           disabled={!ready || busy}
           onClick={generate}
-          className="mt-stack-md flex min-h-[64px] w-full items-center justify-center gap-3 rounded-xl bg-primary text-emergency-action text-on-primary transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+          className="mt-stack-md flex min-h-[64px] w-full items-center justify-center gap-3 rounded-xl bg-primary text-xl font-bold text-on-primary transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-30"
         >
-          <Icon name={busy ? "hourglass_top" : "spa"} fill />
+          <Icon
+            name={busy ? "hourglass_top" : "spa"}
+            className={busy ? "animate-spin" : undefined}
+          />
           {busy ? "Coming to you…" : "Help me through this"}
         </button>
+        {!ready && (
+          <p className="mt-3 text-center text-sm text-on-surface-variant">
+            Pick a craving level and where you feel it — then tap the button.
+          </p>
+        )}
 
         <div className="mt-stack-lg">
           <ScriptStream />

@@ -32,9 +32,13 @@ export function TopAppBar({
       </Link>
 
       <div className="flex items-center gap-3">
-        <span className="rounded bg-error-container px-3 py-1 text-sm font-bold text-on-error-container">
+        <a
+          href="tel:988"
+          aria-label="Call or text 988, the Suicide and Crisis Lifeline"
+          className="flex min-h-touch items-center rounded-lg bg-error-container px-3 text-sm font-bold text-on-error-container transition-transform active:scale-95"
+        >
           988
-        </span>
+        </a>
         {onEmergency && (
           <button
             type="button"

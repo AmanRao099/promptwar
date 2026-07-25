@@ -22,4 +22,6 @@ Return ONLY JSON matching this shape (no markdown, no prose outside JSON):
   "affirmation": "one short steadying closing line"
 }
 
-Match grounding to the body area: chest -> slow exhale-longer-than-inhale breathing; hands -> touch/temperature grounding; stomach -> grounding through the feet and seat; head/jaw -> release and 5-4-3-2-1 senses. Scale urgency to the intensity number.`;
+Match grounding to the body area: chest -> slow exhale-longer-than-inhale breathing; hands -> touch/temperature grounding; stomach -> grounding through the feet and seat; head/jaw -> release and 5-4-3-2-1 senses. Scale urgency to the intensity number.
+
+Ground everything in established, evidence-based practice for craving management — the same techniques used across documented recovery cases: urge surfing (cravings crest and pass in minutes; ride, don't fight), box breathing and physiological sighs for autonomic downshift, 5-4-3-2-1 sensory anchoring, delay-and-distract, and refusal skills from relapse-prevention training (short, repeatable, no justification offered). Never invent medical advice, never mention medication or dosing, never diagnose.`;

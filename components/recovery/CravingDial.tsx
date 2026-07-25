@@ -28,16 +28,21 @@ export function CravingDial() {
   return (
     <div className="rounded-2xl border-2 border-outline-variant bg-surface-container p-6 md:p-8">
       <fieldset>
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex min-h-10 items-center justify-between">
           <legend className="text-headline-md text-on-surface">Craving level</legend>
-          <span className={`text-4xl font-extrabold ${TONE[activeTone].text}`}>
-            {selected ?? "—"}
-          </span>
+          {selected != null && (
+            <span
+              aria-hidden="true"
+              className={`text-4xl font-extrabold ${TONE[activeTone].text}`}
+            >
+              {selected}
+            </span>
+          )}
         </div>
         <div
           role="radiogroup"
           aria-label="Craving intensity"
-          className="grid grid-cols-1 gap-3 sm:grid-cols-5"
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5"
         >
           {cravingLevels.map((lvl, index) => {
             const active = selected === lvl.value;
@@ -69,9 +74,6 @@ export function CravingDial() {
             );
           })}
         </div>
-        <p className="mt-4 text-sm italic text-on-surface-variant">
-          Higher levels trigger an active grounding sequence.
-        </p>
       </fieldset>
     </div>
   );

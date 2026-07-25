@@ -70,11 +70,17 @@ export default function Home() {
         ))}
       </div>
 
-      <p className="mt-stack-lg flex items-center gap-2 text-sm text-on-surface-variant">
-        <Icon name="emergency_home" className="text-error" />
+      <p className="mt-stack-lg text-sm text-on-surface-variant">
+        <Icon name="emergency_home" className="mr-2 inline-block align-[-2px] text-error" />
         In immediate danger? Call or text{" "}
-        <strong className="text-on-surface">988</strong> (Suicide &amp; Crisis
-        Lifeline) or <strong className="text-on-surface">911</strong>.
+        <a href="tel:988" className="font-semibold text-on-surface underline underline-offset-4">
+          988
+        </a>{" "}
+        (Suicide &amp; Crisis Lifeline) or{" "}
+        <a href="tel:911" className="font-semibold text-on-surface underline underline-offset-4">
+          911
+        </a>
+        .
       </p>
     </main>
   );

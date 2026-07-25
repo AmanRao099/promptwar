@@ -23,6 +23,7 @@ import {
   Zap,
   Cross,
   Lightbulb,
+  Check,
   HelpCircle,
   type LucideIcon,
 } from "lucide-react";
@@ -55,6 +56,7 @@ const MAP: Record<string, LucideIcon> = {
   warning: TriangleAlert,
   medical_services: Cross,
   lightbulb: Lightbulb,
+  check: Check,
 };
 
 // `fill` kept for API compatibility (Material used it); lucide is stroke-based
