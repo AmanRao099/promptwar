@@ -6,6 +6,20 @@ disorder (SUD) recovery — and for the people supporting someone through it.
 Two personas, two taps each, spoken grounding, and a **deterministic crisis
 guardrail that never routes an emergency through a language model.**
 
+## 🔑 Try it now — demo logins
+
+No setup needed. Go to `/login` (one-tap fill buttons are on the page):
+
+| Role | Email | Password |
+|---|---|---|
+| **Recovery** (in recovery) | `demo@haven.app` | `haven1234` |
+| **Caretaker** (supporting someone) | `care@haven.app` | `haven1234` |
+
+The caretaker account is pre-linked to the recovery account, so signing in as
+the caretaker shows the recovery user's check-ins, voice notes, SOS alerts, and
+shared locations live. These demo logins work on any deployment with no database
+configured.
+
 - **`/recovery`** — 1-tap craving dial + body-area selector → streamed refusal
   lines and a body-matched grounding exercise, read aloud via the Web Speech
   API. Plus a **voice check-in**: speak what's happening, get evidence-based
