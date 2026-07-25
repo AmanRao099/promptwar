@@ -153,9 +153,21 @@ Import the repo and set these project env vars, then deploy:
 | `AUTH_SECRET` | session signing (`openssl rand -hex 32`) |
 | `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` | **required for accounts** — Vercel's filesystem is ephemeral/read-only, so the local SQLite file cannot work there. Create a free DB at https://turso.tech. |
 
-Without Turso vars, auth endpoints return `503 storage_unavailable` (the rest
-of the app — scripts, voice, crisis overlay — still works signed-out).
-Streaming routes run on the Node.js runtime.
+**Built-in demo logins** work on any deploy with **no database at all** — they
+authenticate without touching storage, so judges/reviewers can sign in
+immediately:
+
+| Role | Email | Password |
+|---|---|---|
+| Recovery | `demo@haven.app` | `haven1234` |
+| Caretaker | `care@haven.app` | `haven1234` |
+
+The demo caretaker is pre-linked to the demo user, so the activity feed
+demonstrates end-to-end (demo activity is in-process and ephemeral). Real,
+DB-backed accounts need the Turso vars above; without them, *creating* a real
+account returns `503 storage_unavailable`, but the demo logins and the whole
+signed-out app (scripts, voice, crisis overlay) still work. Streaming routes
+run on the Node.js runtime.
 
 ### Docker
 `next.config.mjs` emits a standalone server.

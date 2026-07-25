@@ -107,6 +107,35 @@ describe("accounts, linking, and feed access control", () => {
   });
 });
 
+describe("built-in demo accounts (no database)", () => {
+  it("authenticate() resolves demo user/caretaker without touching storage", async () => {
+    const u = await authenticate("demo@haven.app", "haven1234");
+    const c = await authenticate("care@haven.app", "haven1234");
+    expect(u?.role).toBe("user");
+    expect(c?.role).toBe("caretaker");
+    expect(await authenticate("demo@haven.app", "wrong")).toBeNull();
+  });
+
+  it("demo caretaker is pre-linked and sees the demo user's activity", async () => {
+    const u = (await authenticate("demo@haven.app", "haven1234"))!;
+    const c = (await authenticate("care@haven.app", "haven1234"))!;
+    expect((await linkedUsers(c.id)).map((x) => x.email)).toEqual([
+      "demo@haven.app",
+    ]);
+    await logEvent(u.id, "checkin", { cravingValue: 5, somaticId: "chest" });
+    const feed = await feedFor({ userId: c.id, role: "caretaker" });
+    expect(feed[0].type).toBe("checkin");
+    expect(feed[0].user_email).toBe("demo@haven.app");
+  });
+
+  it("scrubs PII in demo events too", async () => {
+    const u = (await authenticate("demo@haven.app", "haven1234"))!;
+    await logEvent(u.id, "voice", { transcript: "reach me at (415) 555-2671" });
+    const feed = await feedFor({ userId: u.id, role: "user" });
+    expect(String(feed[0].payload.transcript)).toContain("[PHONE]");
+  });
+});
+
 describe("event payload bounds", () => {
   it("rejects oversized payloads at the schema", async () => {
     const { eventSchema } = await import("@/lib/schemas/auth");

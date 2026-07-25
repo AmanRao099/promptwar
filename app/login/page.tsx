@@ -174,6 +174,44 @@ export default function LoginPage() {
           ? "New here? Create an account"
           : "Already have an account? Sign in"}
       </button>
+
+      <div className="mt-8 rounded-xl border border-outline-variant bg-surface-container p-4 text-sm">
+        <p className="font-semibold text-on-surface">Try it instantly (demo accounts)</p>
+        <p className="mt-2 text-on-surface-variant">
+          Recovery:{" "}
+          <button
+            type="button"
+            onClick={() => {
+              setMode("signin");
+              setEmail("demo@haven.app");
+              setPassword("haven1234");
+              setError(null);
+            }}
+            className="font-mono text-primary underline underline-offset-4"
+          >
+            demo@haven.app / haven1234
+          </button>
+        </p>
+        <p className="mt-1 text-on-surface-variant">
+          Caretaker:{" "}
+          <button
+            type="button"
+            onClick={() => {
+              setMode("signin");
+              setEmail("care@haven.app");
+              setPassword("haven1234");
+              setError(null);
+            }}
+            className="font-mono text-secondary underline underline-offset-4"
+          >
+            care@haven.app / haven1234
+          </button>
+        </p>
+        <p className="mt-2 text-xs text-on-surface-variant">
+          Demo logins work without any database setup. The caretaker is
+          pre-linked to the recovery demo account.
+        </p>
+      </div>
     </main>
   );
 }

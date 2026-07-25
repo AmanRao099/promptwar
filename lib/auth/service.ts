@@ -2,6 +2,15 @@ import { randomInt } from "node:crypto";
 import { getDriver } from "./db";
 import { hashPassword, verifyPassword } from "./password";
 import { scrubPII } from "@/lib/safety/scrubber";
+import {
+  demoAuthenticate,
+  demoGetUser,
+  demoLinkedUsers,
+  demoLogEvent,
+  demoFeed,
+  isDemoId,
+  isDemoEmail,
+} from "./demo";
 
 export interface UserRow {
   id: number;
@@ -35,6 +44,7 @@ export async function createUser(
   password: string,
   role: "user" | "caretaker",
 ): Promise<UserRow> {
+  if (isDemoEmail(email)) throw new Error("email_taken");
   const db = await getDriver();
   const exists = await db.get("SELECT id FROM users WHERE email = ?", [email]);
   if (exists) throw new Error("email_taken");
@@ -58,6 +68,10 @@ export async function authenticate(
   email: string,
   password: string,
 ): Promise<UserRow | null> {
+  // Built-in demo accounts authenticate without any database.
+  const demo = demoAuthenticate(email, password);
+  if (demo) return demo;
+
   const db = await getDriver();
   const row = await db.get<UserRow & { password_hash: string }>(
     "SELECT id, email, password_hash, role, share_code FROM users WHERE email = ?",
@@ -73,6 +87,7 @@ export async function authenticate(
 }
 
 export async function getUser(id: number): Promise<UserRow | null> {
+  if (isDemoId(id)) return demoGetUser(id);
   const db = await getDriver();
   const row = await db.get<UserRow>(
     "SELECT id, email, role, share_code FROM users WHERE id = ?",
@@ -86,6 +101,8 @@ export async function linkByCode(
   caretakerId: number,
   code: string,
 ): Promise<UserRow> {
+  // Demo caretaker is already pre-linked to the demo user.
+  if (isDemoId(caretakerId)) throw new Error("code_not_found");
   const db = await getDriver();
   const target = await db.get<UserRow>(
     "SELECT id, email, role, share_code FROM users WHERE share_code = ? AND role = 'user'",
@@ -100,6 +117,7 @@ export async function linkByCode(
 }
 
 export async function linkedUsers(caretakerId: number): Promise<UserRow[]> {
+  if (isDemoId(caretakerId)) return demoLinkedUsers();
   const db = await getDriver();
   return db.all<UserRow>(
     `SELECT u.id, u.email, u.role, u.share_code FROM links l
@@ -123,6 +141,10 @@ export async function logEvent(
   type: "checkin" | "voice" | "sos" | "location",
   payload: Record<string, unknown>,
 ): Promise<void> {
+  if (isDemoId(userId)) {
+    demoLogEvent(userId, type, scrubPayload(payload));
+    return;
+  }
   const db = await getDriver();
   await db.run("INSERT INTO events (user_id, type, payload) VALUES (?, ?, ?)", [
     userId,
@@ -140,6 +162,7 @@ export async function feedFor(
   viewer: { userId: number; role: "user" | "caretaker" },
   limit = 50,
 ): Promise<EventRow[]> {
+  if (isDemoId(viewer.userId)) return demoFeed(viewer);
   const db = await getDriver();
   const rows =
     viewer.role === "caretaker"
