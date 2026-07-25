@@ -25,6 +25,11 @@ ENV PORT=3000
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
+# Writable volume for the SQLite store (accounts, links, activity feed).
+ENV DATABASE_PATH=/app/data/haven.db
+RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
+VOLUME /app/data
+
 # Standalone server + static assets only (no full node_modules).
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./

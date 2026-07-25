@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { locationSchema } from "@/lib/schemas/auth";
 import { getSession } from "@/lib/auth/session";
 import { logEvent } from "@/lib/auth/service";
+import { rateLimit, clientKey } from "@/lib/http/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,6 +10,10 @@ export const dynamic = "force-dynamic";
 // Emergency live-location share. Stored as a location event so linked
 // caretakers see it at the top of their feed.
 export async function POST(req: NextRequest) {
+  const rl = rateLimit(clientKey(req, "location"), 30, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  }
   const session = getSession();
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   if (session.role !== "user") {

@@ -3,6 +3,7 @@ import {
   parseCaregiverPartial,
   type PartialCaregiver,
 } from "@/lib/client/partialParse";
+import { streamRequest } from "@/lib/client/streamRequest";
 import {
   caregiverScriptSchema,
   type CaregiverScript,
@@ -48,13 +49,6 @@ export const useCaregiverStore = create<CaregiverState>((set, get) => ({
   setTag: (id) => set({ tagId: id }),
   setNote: (v) => set({ note: v }),
 
-  // Manual SOS — opens the hardcoded emergency overlay (no model involved).
-  showEmergency: () => {
-    inflight?.abort();
-    inflight = null;
-    set({ status: "crisis", crisisCategories: [] });
-  },
-
   reset: () => {
     inflight?.abort();
     inflight = null;
@@ -65,6 +59,13 @@ export const useCaregiverStore = create<CaregiverState>((set, get) => ({
       final: null,
       crisisCategories: [],
     });
+  },
+
+  // Manual SOS — opens the hardcoded emergency overlay (no model involved).
+  showEmergency: () => {
+    inflight?.abort();
+    inflight = null;
+    set({ status: "crisis", crisisCategories: [] });
   },
 
   generate: async () => {
@@ -83,67 +84,31 @@ export const useCaregiverStore = create<CaregiverState>((set, get) => ({
       provider: null,
     });
 
-    let res: Response;
-    try {
-      res = await fetch("/api/caregiver-copilot", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
+    const result = await streamRequest(
+      "/api/caregiver-copilot",
+      { tagId, note: note.trim() ? note.trim() : undefined },
+      {
         signal: controller.signal,
-        body: JSON.stringify({
-          tagId,
-          note: note.trim() ? note.trim() : undefined,
-        }),
-      });
-    } catch (err) {
-      if ((err as Error)?.name === "AbortError") return;
-      set({ status: "error" });
-      return;
-    }
+        onChunk: (acc) => set({ partial: parseCaregiverPartial(acc) }),
+      },
+    );
+    if (inflight === controller) inflight = null;
 
-    if (!res.ok) {
-      set({ status: "error" });
-      return;
-    }
-
-    const contentType = res.headers.get("content-type") ?? "";
-    if (contentType.includes("application/json")) {
-      const data = (await res.json()) as { crisis?: boolean; categories?: string[] };
-      if (data.crisis) {
-        set({ status: "crisis", crisisCategories: data.categories ?? [] });
+    switch (result.outcome) {
+      case "aborted":
         return;
-      }
-      set({ status: "error" });
-      return;
+      case "crisis":
+        set({ status: "crisis", crisisCategories: result.crisisCategories });
+        return;
+      case "error":
+        set({ status: "error" });
+        return;
     }
 
-    set({ provider: res.headers.get("x-haven-provider") });
-
-    if (!res.body) {
-      set({ status: "error" });
-      return;
-    }
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let acc = "";
-    try {
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        acc += decoder.decode(value, { stream: true });
-        set({ partial: parseCaregiverPartial(acc) });
-      }
-    } catch (err) {
-      if ((err as Error)?.name === "AbortError") return;
-      set({ status: "error" });
-      return;
-    } finally {
-      if (inflight === controller) inflight = null;
-    }
+    set({ provider: result.provider });
 
     try {
-      const obj = JSON.parse(acc);
-      const validated = caregiverScriptSchema.parse(obj);
+      const validated = caregiverScriptSchema.parse(JSON.parse(result.text));
       set({ final: validated, partial: validated, status: "done" });
     } catch {
       const p = get().partial;

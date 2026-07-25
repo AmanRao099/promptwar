@@ -6,10 +6,17 @@ disorder (SUD) recovery — and for the people supporting someone through it.
 Two personas, two taps each, spoken grounding, and a **deterministic crisis
 guardrail that never routes an emergency through a language model.**
 
-- **`/recovery`** — 1-tap craving dial + body somatic map → streamed refusal
-  lines and a body-matched grounding exercise, read aloud via the Web Speech API.
+- **`/recovery`** — 1-tap craving dial + body-area selector → streamed refusal
+  lines and a body-matched grounding exercise, read aloud via the Web Speech
+  API. Plus a **voice check-in**: speak what's happening, get evidence-based
+  guidance back — on screen and out loud.
 - **`/caregiver`** — 1-tap situation tags → word-for-word de-escalation script,
-  tone + posture coaching, and things to avoid.
+  tone + posture coaching, and things to avoid. Signed-in caretakers also get
+  a live **activity feed** for the people they support.
+- **Accounts (optional)** — `user` and `caretaker` roles, 30-day sessions.
+  A recovery user hands their caretaker a 6-char consent code; the caretaker
+  then sees check-ins, SOS alerts, and **emergency live-location shares**.
+  Everything works signed-out too — accounts only add the caretaker link.
 
 ---
 
@@ -19,9 +26,11 @@ guardrail that never routes an emergency through a language model.**
 |---|---|
 | Framework | Next.js 14 (App Router) + TypeScript |
 | Styling | TailwindCSS, high-contrast dark theme (WCAG-AAA leaning) |
-| AI | Google GenAI SDK (`@google/genai`), `gemini-2.0-flash` streaming |
+| AI | Groq (`llama-3.3-70b-versatile`) primary · Google GenAI SDK (`@google/genai`, `gemini-2.0-flash`) secondary — both streaming, JSON-structured |
+| Speech | Web Speech API — SpeechRecognition (voice in) + SpeechSynthesis (voice out) |
 | State | Zustand |
-| Validation | Zod (env, request payloads, model responses) |
+| Validation | Zod (env, request payloads, model responses, auth) |
+| Auth & data | scrypt password hashing + HMAC-signed httpOnly cookie · SQLite (better-sqlite3) |
 | Tests | Vitest + React Testing Library + jest-axe |
 
 ---
@@ -32,21 +41,26 @@ guardrail that never routes an emergency through a language model.**
 app/
   api/generate-script/route.ts    recovery streaming route
   api/caregiver-copilot/route.ts  caregiver streaming route
+  api/voice-support/route.ts      spoken check-in streaming route
+  api/auth/*                      signup / login / logout / me
+  api/link, feed, events, location  caretaker link + activity + SOS location
   api/health/route.ts             liveness/readiness probe
-  recovery/  caregiver/  page.tsx
+  recovery/  caregiver/  login/  page.tsx
 lib/
-  safety/failSafe.ts    deterministic pre-LLM crisis detector (bypasses Gemini)
-  safety/scrubber.ts    PII redaction before any model dispatch
+  safety/failSafe.ts    deterministic pre-LLM crisis detector (bypasses the LLM)
+  safety/scrubber.ts    PII redaction before model dispatch AND before storage
   http/streamRoute.ts   shared route handler (rate-limit→validate→bypass→scrub→stream)
-  http/rateLimit.ts     in-memory sliding-window limiter
+  http/rateLimit.ts     in-memory sliding-window limiter (all mutating routes)
   genai/client.ts       Groq + Gemini streaming (live only, no mock)
+  auth/*                scrypt passwords, HMAC sessions, SQLite service + ACL
   prompts/*             modular system prompts (no prompt strings in components)
-  schemas/*             Zod request/response schemas
+  schemas/*             Zod request/response/auth schemas
   config/*              schema-validated UI config (craving, somatic, tags)
   store/*               Zustand stores (AbortController-cancellable streams)
-  client/*              partial-JSON streaming parser, roving-radio a11y hook
+  client/streamRequest.ts  one shared client streaming loop (stores + voice)
+  client/*              partial-JSON parser, roving-radio a11y hook
 components/*             UI (crisis overlay is hardcoded, zero-LLM)
-tests/*                 55 tests
+tests/*                 87 tests
 ```
 
 ### Safety invariant
@@ -60,7 +74,24 @@ rate-limit → parse → validate → DETERMINISTIC CRISIS BYPASS → scrub PII 
 
 If input matches an overdose / self-harm / medical-emergency signal, the request
 returns a crisis flag with **zero** model involvement and the UI renders the
-hardcoded 988 / 911 / 741741 overlay.
+hardcoded 988 / 911 / 741741 overlay. This applies to typed notes AND voice
+transcripts, and holds even when a live provider key is configured.
+
+---
+
+## Requirements traceability
+
+| Requirement | Where |
+|---|---|
+| Zero-typing, high-load UI (1-tap dial, body map, tags) | `components/recovery/CravingDial`, `SomaticSelector`, `components/caregiver/SituationTags` |
+| Streaming GenAI scripts (refusal, grounding, de-escalation) | `app/api/generate-script`, `app/api/caregiver-copilot`, `lib/genai/client.ts` |
+| Multi-modal: voice in / voice out | `components/recovery/VoiceChat` (SpeechRecognition), `AudioGroundingButton` (SpeechSynthesis), `app/api/voice-support` |
+| Deterministic crisis fail-safe, zero LLM in emergencies | `lib/safety/failSafe.ts`, `components/EmergencyOverlay` |
+| PII scrubbing before model + before storage | `lib/safety/scrubber.ts`, `lib/auth/service.ts` |
+| No hardcoded prompts/config in components | `lib/prompts/*`, `lib/config/*` (Zod-validated) |
+| Caregiver support loop (consent link, activity feed, live location) | `lib/auth/*`, `app/api/{link,feed,events,location}`, `components/caregiver/CaretakerFeed` |
+| Env validation + graceful provider failure | `lib/env.ts` (fail-fast), 502 + one bounded retry in `lib/http/streamRoute.ts` |
+| Accessibility | WCAG radiogroup keyboard nav, focus-trapped alert dialog, jest-axe page scans |
 
 ---
 
@@ -83,6 +114,9 @@ fails fast at startup if no provider key is set.
 | `GROQ_MODEL` | No | `llama-3.3-70b-versatile` | Any Groq chat model. |
 | `GEMINI_API_KEY` | No | — | Google AI Studio key; used only if `GROQ_API_KEY` is empty. |
 | `GEMINI_MODEL` | No | `gemini-2.0-flash` | Any `@google/genai`-compatible model id. |
+
+| `AUTH_SECRET` | Prod | dev fallback | Signs session cookies. `openssl rand -hex 32`. |
+| `DATABASE_PATH` | No | `./data/haven.db` | SQLite file. Needs a persistent volume in production. |
 
 \* At least one of `GROQ_API_KEY` / `GEMINI_API_KEY` is required.
 

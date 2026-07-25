@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { parseVoicePartial, type PartialVoice } from "@/lib/client/partialParse";
+import { streamRequest } from "@/lib/client/streamRequest";
 import { voiceReplySchema } from "@/lib/schemas/response";
 import { useRecoveryStore } from "@/lib/store/recovery";
 import { logActivity } from "@/lib/store/auth";
@@ -70,67 +71,37 @@ export function VoiceChat() {
     setStatus("streaming");
     setReply(emptyReply);
 
-    let res: Response;
-    try {
-      res = await fetch("/api/voice-support", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
+    const result = await streamRequest(
+      "/api/voice-support",
+      { transcript: trimmed },
+      {
         signal: controller.signal,
-        body: JSON.stringify({ transcript: trimmed }),
-      });
-    } catch (err) {
-      if ((err as Error)?.name === "AbortError") return;
-      setStatus("error");
-      return;
-    }
+        onChunk: (acc) => setReply(parseVoicePartial(acc)),
+      },
+    );
 
-    if (!res.ok) {
-      setStatus("error");
-      return;
-    }
-
-    // Deterministic crisis bypass — spoken emergencies open the overlay.
-    if ((res.headers.get("content-type") ?? "").includes("application/json")) {
-      const data = (await res.json()) as { crisis?: boolean };
-      if (data.crisis) {
+    switch (result.outcome) {
+      case "aborted":
+        return;
+      case "crisis":
+        // Deterministic crisis bypass — spoken emergencies open the overlay.
         setStatus("idle");
         showEmergency();
         return;
-      }
-      setStatus("error");
-      return;
-    }
-
-    if (!res.body) {
-      setStatus("error");
-      return;
-    }
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let acc = "";
-    try {
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        acc += decoder.decode(value, { stream: true });
-        setReply(parseVoicePartial(acc));
-      }
-    } catch (err) {
-      if ((err as Error)?.name === "AbortError") return;
-      setStatus("error");
-      return;
+      case "error":
+        setStatus("error");
+        return;
     }
 
     try {
-      const validated = voiceReplySchema.parse(JSON.parse(acc));
+      const validated = voiceReplySchema.parse(JSON.parse(result.text));
       setReply(validated);
       setStatus("done");
       logActivity("voice", { transcript: trimmed });
       // Voice in -> voice out: read the reply back.
       speak([validated.reflection, ...validated.guidance, validated.affirmation]);
     } catch {
-      const p = parseVoicePartial(acc);
+      const p = parseVoicePartial(result.text);
       const usable = Boolean(p.reflection) || p.guidance.length > 0;
       setStatus(usable ? "done" : "error");
     }

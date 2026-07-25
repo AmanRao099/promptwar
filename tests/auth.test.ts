@@ -104,3 +104,19 @@ describe("accounts, linking, and feed access control", () => {
     expect(feed.every((e) => e.user_email === "pat@example.com")).toBe(true);
   });
 });
+
+describe("event payload bounds", () => {
+  it("rejects oversized payloads at the schema", async () => {
+    const { eventSchema } = await import("@/lib/schemas/auth");
+    const big = eventSchema.safeParse({
+      type: "voice",
+      payload: { transcript: "x".repeat(3000) },
+    });
+    expect(big.success).toBe(false);
+    const ok = eventSchema.safeParse({
+      type: "checkin",
+      payload: { cravingValue: 3, somaticId: "chest" },
+    });
+    expect(ok.success).toBe(true);
+  });
+});

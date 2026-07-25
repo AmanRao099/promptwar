@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { eventSchema } from "@/lib/schemas/auth";
 import { getSession } from "@/lib/auth/session";
 import { logEvent } from "@/lib/auth/service";
+import { rateLimit, clientKey } from "@/lib/http/rateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,6 +10,10 @@ export const dynamic = "force-dynamic";
 // Recovery user logs an activity event (check-in, voice, SOS). Payload strings
 // are PII-scrubbed in the service before persisting.
 export async function POST(req: NextRequest) {
+  const rl = rateLimit(clientKey(req, "events"), 60, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  }
   const session = getSession();
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   if (session.role !== "user") {

@@ -90,11 +90,30 @@ Scope: **all 8 phases complete**, live-only, verified end-to-end.
 - [x] Removed "offline demo mode" UI notes; docs updated (README, `.env.example`)
 - [x] Route tests stub the provider SSE stream (real code path) + assert 502 on outage + provider-not-called on crisis
 
+## [x] Phase 10: Stitch Material-3 UI + Minimalist Pass
+- [x] Material-3 dark palette/tokens, Inter via next/font, lucide icons (CSP-safe, no CDN)
+- [x] TopAppBar / BottomNav / restyled dials, cards, overlay; tel: links for 988/911
+- [x] UI audit fixes: placeholder dash, letter-dot map → labeled grid, spinners, disabled hints
+- [x] Evidence-based prompt grounding (urge surfing, box breathing, 5-4-3-2-1, CRAFT, MI)
+
+## [x] Phase 11: Voice Check-In (multi-modal)
+- [x] `app/api/voice-support` — transcript through the same rate-limit→validate→crisis-bypass→scrub→stream order
+- [x] `VoiceChat` — SpeechRecognition in, streamed reply, SpeechSynthesis out; large centered mic
+- [x] `Permissions-Policy: microphone=(self)`; hidden gracefully when unsupported
+
+## [x] Phase 12: Accounts, Caretaker Link & Emergency Location
+- [x] Auth: scrypt + HMAC httpOnly cookie (30-day persistent sessions), `/login`, account chip
+- [x] Roles user/caretaker; consent share-code linking; SQLite (better-sqlite3) store
+- [x] Activity feed (check-ins, voice, SOS, locations) — PII-scrubbed at rest, ACL-enforced
+- [x] SOS live-location: big round red button → Geolocation → caretaker feed with Maps link
+- [x] Score-hardening: shared `streamRequest` client helper (dedupe ×3), rate limits + size
+      bounds on events/location, Docker data volume, login axe test, docs/traceability refresh
+
 ### Final verification
 - `npx tsc --noEmit` → 0 errors
 - `npx next lint` → **0 warnings/errors**
 - `npx next build` → succeeds, standalone output
-- `npx vitest run` → **65/65 pass** across 10 files
+- `npx vitest run` → **87/87 pass** across 13 files
 - Live: Groq streaming verified end-to-end (`provider:groq, mode:live`); crisis bypass still zero-LLM with a live key
 - All 6 security headers present, `X-Powered-By` absent, `/api/health` ok, `x-ratelimit-remaining` emitted
 - Browser: recovery + caregiver flows both work end-to-end

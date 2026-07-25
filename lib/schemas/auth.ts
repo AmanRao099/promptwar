@@ -23,7 +23,10 @@ export const linkSchema = z.object({
 
 export const eventSchema = z.object({
   type: z.enum(["checkin", "voice", "sos"]),
-  payload: z.record(z.string(), z.unknown()),
+  payload: z
+    .record(z.string(), z.unknown())
+    // Bound stored size — the feed is personal check-ins, not a blob store.
+    .refine((p) => JSON.stringify(p).length <= 2000, "payload too large"),
 });
 
 export const locationSchema = z.object({

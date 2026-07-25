@@ -3,6 +3,7 @@ import {
   parseRecoveryPartial,
   type PartialRecovery,
 } from "@/lib/client/partialParse";
+import { streamRequest } from "@/lib/client/streamRequest";
 import {
   recoveryScriptSchema,
   type RecoveryScript,
@@ -56,14 +57,6 @@ export const useRecoveryStore = create<RecoveryState>((set, get) => ({
   setSomatic: (id) => set({ somaticId: id }),
   setNote: (v) => set({ note: v }),
 
-  // Manual SOS — opens the hardcoded emergency overlay (no model involved).
-  showEmergency: () => {
-    inflight?.abort();
-    inflight = null;
-    set({ status: "crisis", crisisCategories: [] });
-    logActivity("sos", { trigger: "manual" });
-  },
-
   reset: () => {
     inflight?.abort();
     inflight = null;
@@ -74,6 +67,14 @@ export const useRecoveryStore = create<RecoveryState>((set, get) => ({
       final: null,
       crisisCategories: [],
     });
+  },
+
+  // Manual SOS — opens the hardcoded emergency overlay (no model involved).
+  showEmergency: () => {
+    inflight?.abort();
+    inflight = null;
+    set({ status: "crisis", crisisCategories: [] });
+    logActivity("sos", { trigger: "manual" });
   },
 
   generate: async () => {
@@ -93,74 +94,40 @@ export const useRecoveryStore = create<RecoveryState>((set, get) => ({
       provider: null,
     });
 
-    let res: Response;
-    try {
-      res = await fetch("/api/generate-script", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
+    const result = await streamRequest(
+      "/api/generate-script",
+      {
+        cravingValue,
+        somaticId,
+        note: note.trim() ? note.trim() : undefined,
+      },
+      {
         signal: controller.signal,
-        body: JSON.stringify({
-          cravingValue,
-          somaticId,
-          note: note.trim() ? note.trim() : undefined,
-        }),
-      });
-    } catch (err) {
-      if ((err as Error)?.name === "AbortError") return;
-      set({ status: "error" });
-      return;
-    }
+        onChunk: (acc) => set({ partial: parseRecoveryPartial(acc) }),
+      },
+    );
+    if (inflight === controller) inflight = null;
 
-    if (!res.ok) {
-      set({ status: "error" });
-      return;
-    }
-
-    // Deterministic safety bypass — JSON, not a stream.
-    const contentType = res.headers.get("content-type") ?? "";
-    if (contentType.includes("application/json")) {
-      const data = (await res.json()) as { crisis?: boolean; categories?: string[] };
-      if (data.crisis) {
-        set({ status: "crisis", crisisCategories: data.categories ?? [] });
+    switch (result.outcome) {
+      case "aborted":
+        return;
+      case "crisis":
+        set({ status: "crisis", crisisCategories: result.crisisCategories });
         logActivity("sos", {
           trigger: "crisis-detect",
-          categories: (data.categories ?? []).join(","),
+          categories: result.crisisCategories.join(","),
         });
         return;
-      }
-      set({ status: "error" });
-      return;
+      case "error":
+        set({ status: "error" });
+        return;
     }
 
-    set({ provider: res.headers.get("x-haven-provider") });
-
-    if (!res.body) {
-      set({ status: "error" });
-      return;
-    }
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let acc = "";
-    try {
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        acc += decoder.decode(value, { stream: true });
-        set({ partial: parseRecoveryPartial(acc) });
-      }
-    } catch (err) {
-      if ((err as Error)?.name === "AbortError") return;
-      set({ status: "error" });
-      return;
-    } finally {
-      if (inflight === controller) inflight = null;
-    }
+    set({ provider: result.provider });
 
     // Authoritative validate at end of stream.
     try {
-      const obj = JSON.parse(acc);
-      const validated = recoveryScriptSchema.parse(obj);
+      const validated = recoveryScriptSchema.parse(JSON.parse(result.text));
       set({ final: validated, partial: validated, status: "done" });
       logActivity("checkin", {
         cravingValue,
