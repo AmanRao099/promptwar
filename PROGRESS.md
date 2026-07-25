@@ -3,8 +3,8 @@
 Multi-modal GenAI recovery & prevention platform for Substance Use Disorder (SUD) recovery + caregivers.
 Stack: Next.js 14 App Router · TypeScript · Tailwind · Zustand · Zod · `@google/genai` (`gemini-2.0-flash`) · Vitest.
 
-Model note: spec pinned `gemini-1.5-flash`; using `gemini-2.0-flash` per build decision.
-Key-missing behavior: graceful mock fallback (route streams canned safe scripts when `GEMINI_API_KEY` absent).
+Provider: **Groq** (`llama-3.3-70b-versatile`, free tier) is the active live provider — verified streaming live end-to-end. Fallback order: **Groq → Gemini → deterministic mock** (`lib/env.ts activeProvider`). Gemini kept as a secondary option (`gemini-2.0-flash`).
+Key-missing / provider-failure behavior: graceful mock fallback (streams canned safe scripts; never a blank screen).
 Scope: **all 6 phases complete.** Live-verified in browser (recovery + caregiver). Live Gemini blocked only by 429 quota on the supplied key — app auto-falls back to deterministic mock, zero code change needed when quota frees.
 
 ---
@@ -76,10 +76,18 @@ Scope: **all 6 phases complete.** Live-verified in browser (recovery + caregiver
 - [x] `README.md` — architecture, env, deploy (Vercel + Docker)
 - [x] Tests added: `rateLimit.test.ts`, `health.test.ts`, roving-radio keyboard nav → **55 tests**
 
+## [x] Phase 8: Score-Hardening Polish
+- [x] Groq SSE parser extracted to pure `parseSSELine` + `tests/sse.test.ts` (6 protocol tests) — the live path is now covered
+- [x] `app/icon.svg` + `app/manifest.ts` — favicon + PWA manifest (no more `/favicon.ico` 404)
+- [x] `tests/pages.a11y.test.tsx` — full-page axe scans on landing, `/recovery`, `/caregiver`
+- [x] `.github/workflows/ci.yml` — CI: install → lint → typecheck → test → build on push/PR
+- [x] `git init` + first commit (`.env.local` gitignored; only `.env.example` tracked)
+
 ### Final verification
 - `npx tsc --noEmit` → 0 errors
 - `npx next lint` → **0 warnings/errors**
-- `npx next build` → succeeds, standalone output, 7 routes (adds `/api/health`)
-- `npx vitest run` → **55/55 pass** across 8 files
-- Live prod server: all 6 security headers present, `X-Powered-By` absent, `/api/health` ok, `x-ratelimit-remaining` emitted
-- Browser: recovery + caregiver flows both work end-to-end (verified earlier build)
+- `npx next build` → succeeds, standalone output, 9 routes (adds `/icon.svg`, `/manifest.webmanifest`)
+- `npx vitest run` → **64/64 pass** across 10 files
+- Live: Groq streaming verified end-to-end (`provider:groq, mode:live`); crisis bypass still zero-LLM with a live key
+- All 6 security headers present, `X-Powered-By` absent, `/api/health` ok, `x-ratelimit-remaining` emitted
+- Browser: recovery + caregiver flows both work end-to-end
