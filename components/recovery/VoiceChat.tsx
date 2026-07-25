@@ -181,14 +181,8 @@ export function VoiceChat() {
       aria-label="Voice check-in"
       className="rounded-2xl border-2 border-outline-variant bg-surface-container p-6 md:p-8"
     >
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-headline-md text-on-surface">Or just talk</h2>
-          <p className="mt-1 text-sm text-on-surface-variant">
-            Say what&apos;s happening. Private — personal details are scrubbed
-            before anything is processed.
-          </p>
-        </div>
+      <div className="flex flex-col items-center text-center">
+        <h2 className="text-headline-md text-on-surface">Or just talk</h2>
         <button
           type="button"
           onClick={listening ? stopListening : startListening}
@@ -196,14 +190,20 @@ export function VoiceChat() {
           aria-pressed={listening}
           aria-label={listening ? "Stop listening and get support" : "Start talking"}
           className={[
-            "flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-2 transition-all active:scale-90 disabled:cursor-not-allowed disabled:opacity-30",
+            "mt-6 flex h-28 w-28 items-center justify-center rounded-full border-2 transition-all active:scale-90 disabled:cursor-not-allowed disabled:opacity-30",
             listening
               ? "animate-pulse-red border-error bg-error/20 text-error"
               : "border-primary bg-primary/15 text-primary hover:bg-primary/25",
           ].join(" ")}
         >
-          <Icon name={listening ? "stop" : "record_voice_over"} className="text-2xl" />
+          <Icon name={listening ? "stop" : "record_voice_over"} className="text-5xl" />
         </button>
+        <p className="mt-4 text-label-lg text-on-surface">
+          {listening ? "Listening — tap to finish" : "Tap and say what's happening"}
+        </p>
+        <p className="mt-1 max-w-md text-sm text-on-surface-variant">
+          Private — personal details are scrubbed before anything is processed.
+        </p>
       </div>
 
       {(listening || transcript) && (
