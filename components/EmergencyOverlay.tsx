@@ -161,26 +161,36 @@ export function EmergencyOverlay({ onDismiss }: { onDismiss?: () => void }) {
           </ul>
 
           {canShareLocation && (
-            <button
-              type="button"
-              onClick={sendLocation}
-              disabled={locStatus === "sending" || locStatus === "sent"}
-              className={[
-                "flex min-h-[56px] w-full items-center justify-center gap-3 rounded-lg border-2 px-4 py-3 text-label-lg transition-all active:scale-[0.98] disabled:cursor-default",
-                locStatus === "sent"
-                  ? "border-primary bg-primary/20 text-on-surface"
-                  : "border-primary text-on-surface hover:bg-surface-container-high",
-              ].join(" ")}
-            >
-              <Icon
-                name={locStatus === "sent" ? "check" : "emergency_share"}
-                className={locStatus === "sending" ? "animate-pulse" : undefined}
-              />
-              {locStatus === "idle" && "Send my live location to my caretaker"}
-              {locStatus === "sending" && "Getting your location…"}
-              {locStatus === "sent" && "Location sent to your caretaker"}
-              {locStatus === "error" && "Couldn't get location — tap to retry"}
-            </button>
+            <div className="flex flex-col items-center py-2 text-center">
+              <button
+                type="button"
+                onClick={sendLocation}
+                disabled={locStatus === "sending" || locStatus === "sent"}
+                aria-label="Send my live location to my caretaker"
+                className={[
+                  "flex h-32 w-32 items-center justify-center rounded-full border-4 shadow-2xl transition-all active:scale-90 disabled:cursor-default",
+                  locStatus === "sent"
+                    ? "border-primary bg-primary/25 text-primary"
+                    : "animate-pulse-red border-error bg-error text-[#3a0000] hover:brightness-110",
+                ].join(" ")}
+              >
+                <Icon
+                  name={locStatus === "sent" ? "check" : "emergency_share"}
+                  className={`text-6xl ${locStatus === "sending" ? "animate-pulse" : ""}`}
+                />
+              </button>
+              <p className="mt-3 text-label-lg font-bold text-on-surface">
+                {locStatus === "idle" && "Send my live location"}
+                {locStatus === "sending" && "Getting your location…"}
+                {locStatus === "sent" && "Location sent to your caretaker"}
+                {locStatus === "error" && "Couldn't get location — tap to retry"}
+              </p>
+              {locStatus !== "sent" && (
+                <p className="mt-1 text-sm text-on-surface-variant">
+                  Goes straight to your caretaker with a map link.
+                </p>
+              )}
+            </div>
           )}
 
           {onDismiss && (
